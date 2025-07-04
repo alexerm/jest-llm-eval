@@ -1,15 +1,21 @@
-/** @type {import('ts-jest').JestConfigWithTsJest} */
-module.exports = {
+/** @type {import('jest').Config} */
+export default {
   preset: 'ts-jest',
   testEnvironment: 'node',
+  extensionsToTreatAsEsm: ['.ts'],
+  moduleNameMapper: {
+    '^(\\.{1,2}/.*)\\.js$': '$1',
+  },
+  transform: {
+    '^.+\\.ts$': ['ts-jest', {
+      useESM: true,
+    }],
+  },
   reporters: [
     'default',
-    ['./dist/evaluation-reporter.js', { outputDir: 'jest-evaluation-results' }]
+    ['<rootDir>/dist/terminal-reporter.js', { outputDir: 'jest-evaluation-results' }]
   ],
-  setupFilesAfterEnv: ['./dist/test-utils.js'],
-  transform: {
-    '^.+\\.ts$': 'ts-jest',
-  },
+  setupFilesAfterEnv: ['<rootDir>/src/test-utils.ts'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(spec|test).ts'],
   collectCoverageFrom: [

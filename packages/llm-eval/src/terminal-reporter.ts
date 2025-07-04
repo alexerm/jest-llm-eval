@@ -3,7 +3,7 @@ import * as path from 'path';
 import chalk from 'chalk';
 import Table from 'cli-table3';
 import boxen from 'boxen';
-import ora from 'ora';
+import ora, { Ora } from 'ora';
 import figlet from 'figlet';
 import { EvaluationRecord } from './test-utils';
 
@@ -59,14 +59,20 @@ const THEMES: Record<string, ThemeConfig> = {
   },
 };
 
+// Minimal model message type
+interface ModelMessage {
+  role: string;
+  content: string | object;
+}
+
 class TerminalReporter {
-  private _globalConfig: any;
+  private _globalConfig: object;
   private _options: TerminalReporterOptions;
   private outputDir: string;
   private theme: ThemeConfig;
-  private spinner: any;
+  private spinner: Ora | undefined;
 
-  constructor(globalConfig: any, options: TerminalReporterOptions = {}) {
+  constructor(globalConfig: object, options: TerminalReporterOptions = {}) {
     this._globalConfig = globalConfig;
     this._options = {
       showDetails: true,
@@ -75,7 +81,9 @@ class TerminalReporter {
       theme: 'default',
       ...options,
     };
-    this.outputDir = path.resolve(options.outputDir || 'jest-evaluation-results');
+    this.outputDir = path.resolve(
+      options.outputDir || 'jest-evaluation-results'
+    );
     this.theme = THEMES[this._options.theme || 'default'];
 
     if (global.evaluationRecords === undefined) {
@@ -92,13 +100,13 @@ class TerminalReporter {
     }
   }
 
-  onTestStart(test: any): void {
+  onTestStart(test: { path: string }): void {
     if (this._options.interactive && this.spinner) {
       this.spinner.text = this.theme.info(`Evaluating: ${test.path}`);
     }
   }
 
-  onRunComplete(contexts: any, results: any): void {
+  onRunComplete(): void {
     if (this.spinner) {
       this.spinner.stop();
     }
@@ -111,7 +119,7 @@ class TerminalReporter {
 
     this.displayHeader();
     this.displaySummary(evaluationRecords);
-    
+
     if (this._options.showDetails) {
       this.displayDetailedResults(evaluationRecords);
     }
@@ -131,8 +139,12 @@ class TerminalReporter {
         verticalLayout: 'default',
       });
       console.log(this.theme.primary(titleText));
-    } catch (error) {
-      console.log(this.theme.primary(this.theme.bold('🤖 LLM EVALUATION RESULTS')));
+    } catch {
+      console.log(
+        this.theme.primary(
+          this.theme.bold('\ud83e\udd16 LLM EVALUATION RESULTS')
+        )
+      );
     }
     console.log(this.theme.muted('━'.repeat(80)));
   }
@@ -144,13 +156,26 @@ class TerminalReporter {
     const successRate = totalTests > 0 ? (passedTests / totalTests) * 100 : 0;
 
     // Calculate total tokens
-    const totalTokens = records.reduce((sum, r) => sum + (r.usage?.totalTokens || 0), 0);
-    const avgDuration = totalTests > 0 ? Math.round(records.reduce((sum, r) => sum + r.durationMs, 0) / totalTests) : 0;
+    const totalTokens = records.reduce(
+      (sum, r) => sum + (r.usage?.totalTokens || 0),
+      0
+    );
+    const avgDuration =
+      totalTests > 0
+        ? Math.round(
+            records.reduce((sum, r) => sum + r.durationMs, 0) / totalTests
+          )
+        : 0;
 
     const summaryData = [
       ['📊 Total Tests', this.theme.bold(totalTests.toString())],
       ['✅ Passed', this.theme.success(passedTests.toString())],
-      ['❌ Failed', failedTests > 0 ? this.theme.error(failedTests.toString()) : this.theme.muted('0')],
+      [
+        '❌ Failed',
+        failedTests > 0
+          ? this.theme.error(failedTests.toString())
+          : this.theme.muted('0'),
+      ],
       ['📈 Success Rate', this.formatSuccessRate(successRate)],
       ['⏱️  Avg Duration', this.theme.info(`${avgDuration}ms`)],
       ['🔢 Total Tokens', this.theme.info(totalTokens.toLocaleString())],
@@ -158,10 +183,21 @@ class TerminalReporter {
 
     const summaryTable = new Table({
       chars: {
-        'top': '─', 'top-mid': '┬', 'top-left': '┌', 'top-right': '┐',
-        'bottom': '─', 'bottom-mid': '┴', 'bottom-left': '└', 'bottom-right': '┘',
-        'left': '│', 'left-mid': '├', 'mid': '─', 'mid-mid': '┼',
-        'right': '│', 'right-mid': '┤', 'middle': '│'
+        top: '─',
+        'top-mid': '┬',
+        'top-left': '┌',
+        'top-right': '┐',
+        bottom: '─',
+        'bottom-mid': '┴',
+        'bottom-left': '└',
+        'bottom-right': '┘',
+        left: '│',
+        'left-mid': '├',
+        mid: '─',
+        'mid-mid': '┼',
+        right: '│',
+        'right-mid': '┤',
+        middle: '│',
       },
       style: { 'padding-left': 2, 'padding-right': 2 },
       colWidths: [20, 20],
@@ -179,16 +215,19 @@ class TerminalReporter {
     console.log('\n' + this.theme.bold('📝 DETAILED RESULTS'));
 
     // Group by test path
-    const groupedRecords = records.reduce((acc, record) => {
-      const fileName = path.basename(record.testPath);
-      if (!acc[fileName]) acc[fileName] = [];
-      acc[fileName].push(record);
-      return acc;
-    }, {} as Record<string, EvaluationRecord[]>);
+    const groupedRecords = records.reduce(
+      (acc, record) => {
+        const fileName = path.basename(record.testPath);
+        if (!acc[fileName]) acc[fileName] = [];
+        acc[fileName].push(record);
+        return acc;
+      },
+      {} as Record<string, EvaluationRecord[]>
+    );
 
     Object.entries(groupedRecords).forEach(([fileName, fileRecords]) => {
       console.log(`\n${this.theme.primary('📁 ' + fileName)}`);
-      
+
       fileRecords.forEach(record => {
         this.displayTestResult(record);
       });
@@ -202,11 +241,17 @@ class TerminalReporter {
 
     console.log(`\n  ${testHeader}`);
     console.log(`  ${this.theme.muted('ID:')} ${this.theme.dim(record.id)}`);
-    console.log(`  ${this.theme.muted('Duration:')} ${this.theme.info(record.durationMs + 'ms')}`);
-    console.log(`  ${this.theme.muted('Model:')} ${this.theme.info(record.modelId)}`);
+    console.log(
+      `  ${this.theme.muted('Duration:')} ${this.theme.info(record.durationMs + 'ms')}`
+    );
+    console.log(
+      `  ${this.theme.muted('Model:')} ${this.theme.info(record.modelId)}`
+    );
 
     if (record.usage) {
-      console.log(`  ${this.theme.muted('Tokens:')} ${this.theme.info(`${record.usage.totalTokens} (${record.usage.promptTokens}+${record.usage.completionTokens})`)}`);
+      console.log(
+        `  ${this.theme.muted('Tokens:')} ${this.theme.info(`${record.usage.totalTokens} (${record.usage.promptTokens}+${record.usage.completionTokens})`)}`
+      );
     }
 
     // Display criteria results
@@ -216,7 +261,9 @@ class TerminalReporter {
       // Compact view - just show failed criteria
       const failedCriteria = record.results.filter(r => !r.passed);
       if (failedCriteria.length > 0) {
-        console.log(`  ${this.theme.error('Failed criteria:')} ${failedCriteria.map(c => c.id).join(', ')}`);
+        console.log(
+          `  ${this.theme.error('Failed criteria:')} ${failedCriteria.map(c => c.id).join(', ')}`
+        );
       }
     }
   }
@@ -228,13 +275,24 @@ class TerminalReporter {
       head: [
         this.theme.bold('Criterion'),
         this.theme.bold('Status'),
-        this.theme.bold('Description')
+        this.theme.bold('Description'),
       ],
       chars: {
-        'top': '─', 'top-mid': '┬', 'top-left': '┌', 'top-right': '┐',
-        'bottom': '─', 'bottom-mid': '┴', 'bottom-left': '└', 'bottom-right': '┘',
-        'left': '│', 'left-mid': '├', 'mid': '─', 'mid-mid': '┼',
-        'right': '│', 'right-mid': '┤', 'middle': '│'
+        top: '─',
+        'top-mid': '┬',
+        'top-left': '┌',
+        'top-right': '┐',
+        bottom: '─',
+        'bottom-mid': '┴',
+        'bottom-left': '└',
+        'bottom-right': '┘',
+        left: '│',
+        'left-mid': '├',
+        mid: '─',
+        'mid-mid': '┼',
+        right: '│',
+        'right-mid': '┤',
+        middle: '│',
       },
       style: { 'padding-left': 1, 'padding-right': 1 },
       colWidths: [15, 8, 40],
@@ -242,14 +300,14 @@ class TerminalReporter {
     });
 
     record.results.forEach(result => {
-      const status = result.passed 
-        ? this.theme.success('✓ PASS') 
+      const status = result.passed
+        ? this.theme.success('✓ PASS')
         : this.theme.error('✗ FAIL');
-      
+
       criteriaTable.push([
         this.theme.info(result.id),
         status,
-        this.theme.muted(this.truncateText(result.description, 35))
+        this.theme.muted(this.truncateText(result.description, 35)),
       ]);
     });
 
@@ -259,10 +317,12 @@ class TerminalReporter {
   private displayFooter(records: EvaluationRecord[]): void {
     const hasFailures = records.some(r => !r.passed);
     const footerColor = hasFailures ? this.theme.error : this.theme.success;
-    const statusText = hasFailures ? 'SOME EVALUATIONS FAILED' : 'ALL EVALUATIONS PASSED';
+    const statusText = hasFailures
+      ? 'SOME EVALUATIONS FAILED'
+      : 'ALL EVALUATIONS PASSED';
 
     console.log('\n' + this.theme.muted('━'.repeat(80)));
-    
+
     const footerBox = boxen(footerColor(this.theme.bold(statusText)), {
       padding: 1,
       margin: 1,
@@ -275,17 +335,25 @@ class TerminalReporter {
 
     // Show file paths
     console.log(this.theme.muted('💾 Reports saved to:'));
-    console.log(this.theme.info(`   HTML: ${path.join(this.outputDir, 'evaluation-overview.html')}`));
-    console.log(this.theme.info(`   JSON: ${path.join(this.outputDir, 'evaluation-overview.json')}`));
+    console.log(
+      this.theme.info(
+        `   HTML: ${path.join(this.outputDir, 'evaluation-overview.html')}`
+      )
+    );
+    console.log(
+      this.theme.info(
+        `   JSON: ${path.join(this.outputDir, 'evaluation-overview.json')}`
+      )
+    );
     console.log('');
   }
 
   private displayNoRecords(): void {
     const message = boxen(
       this.theme.warning('No LLM evaluation records found!\n\n') +
-      this.theme.muted('Make sure you\'re using the ') +
-      this.theme.info('toPassAllCriteria') +
-      this.theme.muted(' matcher in your tests.'),
+        this.theme.muted("Make sure you're using the ") +
+        this.theme.info('toPassAllCriteria') +
+        this.theme.muted(' matcher in your tests.'),
       {
         padding: 2,
         margin: 1,
@@ -326,9 +394,21 @@ class TerminalReporter {
           totalTests: records.length,
           passedTests: records.filter(r => r.passed).length,
           failedTests: records.filter(r => !r.passed).length,
-          successRate: records.length > 0 ? (records.filter(r => r.passed).length / records.length) * 100 : 0,
-          totalTokens: records.reduce((sum, r) => sum + (r.usage?.totalTokens || 0), 0),
-          avgDuration: records.length > 0 ? Math.round(records.reduce((sum, r) => sum + r.durationMs, 0) / records.length) : 0,
+          successRate:
+            records.length > 0
+              ? (records.filter(r => r.passed).length / records.length) * 100
+              : 0,
+          totalTokens: records.reduce(
+            (sum, r) => sum + (r.usage?.totalTokens || 0),
+            0
+          ),
+          avgDuration:
+            records.length > 0
+              ? Math.round(
+                  records.reduce((sum, r) => sum + r.durationMs, 0) /
+                    records.length
+                )
+              : 0,
         },
         records: records,
         generatedAt: new Date().toISOString(),
@@ -338,14 +418,13 @@ class TerminalReporter {
         path.join(this.outputDir, 'terminal-evaluation-report.json'),
         JSON.stringify(jsonReport, null, 2)
       );
-
     } catch (error) {
       console.log(this.theme.error('Failed to generate file reports:'), error);
     }
   }
 
   // Interactive methods for future enhancement
-  displayInteractiveMenu(records: EvaluationRecord[]): void {
+  displayInteractiveMenu(): void {
     // Future: Add interactive terminal navigation
     console.log(this.theme.info('\n🎮 Interactive mode coming soon!'));
     console.log(this.theme.muted('Features planned:'));
@@ -356,22 +435,29 @@ class TerminalReporter {
   }
 
   displayConversationPreview(record: EvaluationRecord): void {
-    console.log(`\n${this.theme.bold('💬 Conversation Preview')} (${record.testName})`);
-    
+    console.log(
+      `\n${this.theme.bold('💬 Conversation Preview')} (${record.testName})`
+    );
     const maxMessages = 4;
-    const messages = record.conversation.slice(0, maxMessages);
-    
-    messages.forEach((msg: any, index: number) => {
-      const roleColor = msg.role === 'user' ? this.theme.primary : this.theme.success;
-      const content = typeof msg.content === 'string' 
-        ? this.truncateText(msg.content, 60)
-        : '[Complex content]';
-      
-      console.log(`  ${roleColor(msg.role.toUpperCase())}: ${this.theme.muted(content)}`);
+    const messages = record.conversation.slice(
+      0,
+      maxMessages
+    ) as ModelMessage[];
+    messages.forEach(msg => {
+      const roleColor =
+        msg.role === 'user' ? this.theme.primary : this.theme.success;
+      const content =
+        typeof msg.content === 'string'
+          ? this.truncateText(msg.content, 60)
+          : '[Complex content]';
+      console.log(
+        `  ${roleColor(msg.role.toUpperCase())}: ${this.theme.muted(content)}`
+      );
     });
-
     if (record.conversation.length > maxMessages) {
-      console.log(`  ${this.theme.dim(`... and ${record.conversation.length - maxMessages} more messages`)}`);
+      console.log(
+        `  ${this.theme.dim(`... and ${record.conversation.length - maxMessages} more messages`)}`
+      );
     }
   }
 }

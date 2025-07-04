@@ -5,6 +5,8 @@
 
 A powerful Jest extension for evaluating Large Language Model (LLM) responses using AI-powered assertions. Test your AI applications with semantic understanding rather than brittle string matching.
 
+> 🚧 **v2.x Beta**: This version uses AI SDK v5 beta. For stable AI SDK v3 support, use [v1.x](https://github.com/alexerm/jest-llm-eval/tree/v1.0.0). See [Migration Guide](./MIGRATION-V5.md) for upgrading.
+
 ## Features
 
 - 🤖 **AI-Powered Assertions**: Evaluate LLM responses using another LLM as a judge
@@ -63,9 +65,9 @@ import { defineEvaluationCriteria, CRITERIA } from 'jest-llm-eval';
 
 // Use predefined criteria
 const criteria = defineEvaluationCriteria()
-  .add(CRITERIA.Welcome)        // Response is welcoming
-  .add(CRITERIA.Relevance)      // Response is relevant
-  .add(CRITERIA.Conciseness)    // Response is concise
+  .add(CRITERIA.Welcome) // Response is welcoming
+  .add(CRITERIA.Relevance) // Response is relevant
+  .add(CRITERIA.Conciseness) // Response is concise
   .add(CRITERIA.Professionalism) // Response is professional
   .build();
 
@@ -73,11 +75,11 @@ const criteria = defineEvaluationCriteria()
 const customCriteria = defineEvaluationCriteria()
   .add({
     id: 'accuracy',
-    description: 'The response contains factually accurate information'
+    description: 'The response contains factually accurate information',
   })
   .add({
     id: 'code_quality',
-    description: 'Any code examples follow best practices'
+    description: 'Any code examples follow best practices',
   })
   .build();
 ```
@@ -87,6 +89,7 @@ const customCriteria = defineEvaluationCriteria()
 Jest LLM Eval provides several powerful matchers:
 
 #### `toPassAllCriteria`
+
 Evaluates responses against defined criteria:
 
 ```typescript
@@ -94,6 +97,7 @@ await expect(conversation).toPassAllCriteria(criteria, evaluationModel);
 ```
 
 #### `toPassWithConfidence`
+
 Runs tests multiple times to ensure reliability:
 
 ```typescript
@@ -104,11 +108,12 @@ const testFunction = async () => {
 
 await expect(testFunction).toPassWithConfidence({
   iterations: 5,
-  minSuccessRate: 0.8  // 80% success rate required
+  minSuccessRate: 0.8, // 80% success rate required
 });
 ```
 
 #### `toHaveToolCall`
+
 Verifies AI agents make correct tool/function calls:
 
 ```typescript
@@ -118,7 +123,7 @@ await expect(conversation).toHaveToolCall('search_database');
 // Check tool call with specific arguments
 await expect(conversation).toHaveToolCall('search_database', {
   query: 'user preferences',
-  limit: 10
+  limit: 10,
 });
 ```
 
@@ -133,28 +138,30 @@ import { runMultiStepTest } from 'jest-llm-eval';
 
 test('multi-step customer service conversation', async () => {
   const conversation = await runMultiStepTest(
-    [
-      "I need help with my order",
-      "Order #12345",
-      "I want to return it"
-    ],
+    ['I need help with my order', 'Order #12345', 'I want to return it'],
     {
-      createAgentPrompt: (messages) => ({
+      createAgentPrompt: messages => ({
         model: openai('gpt-4'),
         messages: [
-          { role: 'system', content: 'You are a helpful customer service agent' },
-          ...messages
-        ]
+          {
+            role: 'system',
+            content: 'You are a helpful customer service agent',
+          },
+          ...messages,
+        ],
       }),
       onStep: (conversation, stepIndex) => {
         console.log(`Step ${stepIndex + 1} completed`);
-      }
+      },
     }
   );
 
   const criteria = defineEvaluationCriteria()
     .add(CRITERIA.Professionalism)
-    .add({ id: 'helpful', description: 'Provides helpful assistance throughout' })
+    .add({
+      id: 'helpful',
+      description: 'Provides helpful assistance throughout',
+    })
     .build();
 
   await expect(conversation).toPassAllCriteria(criteria, evaluationModel);
@@ -171,8 +178,8 @@ import { anthropic } from '@ai-sdk/anthropic';
 import { google } from '@ai-sdk/google';
 
 // Different models for different purposes
-const fastModel = openai('gpt-3.5-turbo');      // Quick evaluations
-const smartModel = openai('gpt-4');              // Complex evaluations
+const fastModel = openai('gpt-3.5-turbo'); // Quick evaluations
+const smartModel = openai('gpt-4'); // Complex evaluations
 const alternativeModel = anthropic('claude-3-haiku'); // Different perspective
 ```
 
@@ -188,15 +195,21 @@ module.exports = {
   reporters: [
     'default',
     // Choose your preferred reporter(s)
-    ['jest-llm-eval/terminal-reporter', { 
-      theme: 'vibrant',           // 'default', 'minimal', 'vibrant'
-      showDetails: true,          // Show detailed test results
-      compact: false              // Use compact output format
-    }],
-    ['jest-llm-eval/evaluation-reporter', { 
-      outputDir: './evaluation-reports' 
-    }]
-  ]
+    [
+      'jest-llm-eval/terminal-reporter',
+      {
+        theme: 'vibrant', // 'default', 'minimal', 'vibrant'
+        showDetails: true, // Show detailed test results
+        compact: false, // Use compact output format
+      },
+    ],
+    [
+      'jest-llm-eval/evaluation-reporter',
+      {
+        outputDir: './evaluation-reports',
+      },
+    ],
+  ],
 };
 ```
 
@@ -224,7 +237,9 @@ If using TypeScript, add to your `tsconfig.json`:
 Jest LLM Eval generates comprehensive reports in multiple formats:
 
 ### 🎨 Terminal Reports
+
 Beautiful, colorful terminal output with:
+
 - 📊 **Rich Tables**: Formatted test results with colors and borders
 - 🎯 **Visual Indicators**: Clear pass/fail status with icons
 - 📈 **Summary Statistics**: Success rates, token usage, timing
@@ -232,19 +247,24 @@ Beautiful, colorful terminal output with:
 - 🎨 **Multiple Themes**: Default, minimal, and vibrant themes
 
 ### 📊 HTML Reports
+
 Interactive web reports featuring:
+
 - 🌐 **Web Interface**: Navigate through results in your browser
 - 📱 **Responsive Design**: Works on desktop and mobile
 - 🔗 **Linked Details**: Click through to detailed conversation views
 - 💾 **Permanent Archive**: Save and share evaluation results
 
 ### 📋 JSON Reports
+
 Machine-readable data for:
+
 - 🔌 **API Integration**: Process results programmatically
 - 📈 **Analytics**: Build custom dashboards and metrics
 - 🔄 **CI/CD Integration**: Automate evaluation workflows
 
 ### 🖥️ CLI Viewer
+
 Interactive command-line tool for viewing reports:
 
 ```bash
@@ -262,6 +282,7 @@ npx jest-llm-eval view --no-details
 ```
 
 All reports include:
+
 - ✅ Pass/fail status for each criterion
 - 📊 Token usage statistics and costs
 - 🕐 Execution timing and performance metrics
@@ -271,11 +292,13 @@ All reports include:
 ## Best Practices
 
 ### 1. Choose the Right Evaluation Model
+
 - Use `gpt-4` for complex evaluations requiring nuanced understanding
 - Use `gpt-3.5-turbo` for simple, fast evaluations
 - Consider using different models for different types of criteria
 
 ### 2. Design Clear Criteria
+
 ```typescript
 // Good: Specific and measurable
 .add({
@@ -291,19 +314,21 @@ All reports include:
 ```
 
 ### 3. Use Confidence Testing for Critical Paths
+
 ```typescript
 // For critical functionality, ensure consistency
 await expect(criticalTestFunction).toPassWithConfidence({
   iterations: 10,
-  minSuccessRate: 0.9
+  minSuccessRate: 0.9,
 });
 ```
 
 ### 4. Structure Your Tests
+
 ```typescript
 describe('Customer Service Agent', () => {
   const evaluationModel = openai('gpt-4');
-  
+
   const baseCriteria = defineEvaluationCriteria()
     .add(CRITERIA.Professionalism)
     .add(CRITERIA.Relevance)
@@ -335,9 +360,11 @@ Check out the `/examples` directory for complete working examples:
 ### Core Functions
 
 #### `defineEvaluationCriteria()`
+
 Creates a builder for defining evaluation criteria.
 
 #### `evaluateAiResponse(model, messages, criteria)`
+
 Directly evaluate a conversation against criteria.
 
 ### Predefined Criteria

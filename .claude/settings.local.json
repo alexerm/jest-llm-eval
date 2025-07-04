@@ -6,7 +6,14 @@
       "Bash(npm run lint)",
       "Bash(npm test)",
       "Bash(git remote add:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git tag:*)",
+      "Bash(git checkout:*)",
+      "WebFetch(domain:ai-sdk.dev)",
+      "Bash(npm view:*)",
+      "Bash(node:*)"
     ],
     "deny": []
   }
