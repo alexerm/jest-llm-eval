@@ -1,4 +1,4 @@
-import { type LanguageModel, generateObject, type ModelMessage } from 'ai';
+import { type LanguageModel, generateObject, type CoreMessage } from 'ai';
 import { z } from 'zod';
 
 // Defines the structure for an evaluation criterion input
@@ -89,7 +89,7 @@ export function defineEvaluationCriteria() {
  */
 export async function evaluateAiResponse(
   evaluationModel: LanguageModel,
-  messages: ModelMessage[],
+  messages: CoreMessage[],
   evaluationCriteria: ReadonlyArray<EvaluationCriterionDef>
 ): Promise<EvaluationResultWithUsage> { // MODIFIED return type
 

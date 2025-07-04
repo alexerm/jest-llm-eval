@@ -1,83 +1,87 @@
-// @ts-nocheck
-// evaluation-reporter.ts (will contain plain JS)
-const fs = require('fs');
-const path = require('path');
+import * as fs from 'fs';
+import * as path from 'path';
+import { EvaluationRecord } from './test-utils';
 
-// TODO: Consider re-introducing types via JSDoc if needed for intellisense,
-// once runtime errors are resolved.
-// For now, all type annotations are removed.
-
-function EvaluationReporter(globalConfig, options) {
-  this._globalConfig = globalConfig;
-  this._options = options;
-  this.outputDir = path.resolve(options.outputDir || 'jest-evaluation-results');
-
-  if (global.evaluationRecords === undefined) {
-    global.evaluationRecords = [];
-  }
+interface EvaluationReporterOptions {
+  outputDir?: string;
 }
 
-EvaluationReporter.prototype.onRunComplete = function(contexts, results) {
-  const evaluationRecords = global.evaluationRecords;
-  if (!evaluationRecords || evaluationRecords.length === 0) {
-    console.log('\nNo evaluation records found to generate a report.');
-    return;
-  }
-  console.log(`\nGenerating evaluation report with ${evaluationRecords.length} record(s)...`);
+class EvaluationReporter {
+  private _globalConfig: any;
+  private _options: EvaluationReporterOptions;
+  private outputDir: string;
 
-  try {
-    if (!fs.existsSync(this.outputDir)) {
-      fs.mkdirSync(this.outputDir, { recursive: true });
+  constructor(globalConfig: any, options: EvaluationReporterOptions) {
+    this._globalConfig = globalConfig;
+    this._options = options;
+    this.outputDir = path.resolve(options.outputDir || 'jest-evaluation-results');
+
+    if (global.evaluationRecords === undefined) {
+      global.evaluationRecords = [];
     }
-    const resultsSubDir = path.join(this.outputDir, 'details');
-    if (!fs.existsSync(resultsSubDir)) {
-        fs.mkdirSync(resultsSubDir, { recursive: true });
-    }
-
-    this.generateJsonOutput(evaluationRecords, resultsSubDir);
-    this.generateHtmlOutput(evaluationRecords, resultsSubDir);
-
-    console.log(`\nJest Evaluation Report generated at: ${this.outputDir}`);
-  } catch (error) {
-    console.error('Error generating Jest Evaluation Report:', error);
   }
-};
 
-EvaluationReporter.prototype.generateJsonOutput = function(records, resultsSubDir) {
-  const overviewJsonPath = path.join(this.outputDir, 'evaluation-overview.json');
-  const overviewData = records.map(r => ({
-    id: r.id,
-    testName: r.testName,
-    testPath: r.testPath,
-    timestamp: r.timestamp,
-    durationMs: r.durationMs,
-    modelId: r.modelId,
-    passed: r.passed,
-    detailsJson: `details/${r.id}.json`,
-    detailsHtml: `details/${r.id}.html`,
-  }));
-  fs.writeFileSync(overviewJsonPath, JSON.stringify(overviewData, null, 2));
+  onRunComplete(contexts: any, results: any): void {
+    const evaluationRecords = global.evaluationRecords;
+    if (!evaluationRecords || evaluationRecords.length === 0) {
+      console.log('\nNo evaluation records found to generate a report.');
+      return;
+    }
+    console.log(`\nGenerating evaluation report with ${evaluationRecords.length} record(s)...`);
 
-  records.forEach(r => {
-    const detailJsonPath = path.join(resultsSubDir, `${r.id}.json`);
-    // Ensure all parts of the record are serializable
-    const serializableRecord = {
-        ...r,
-        criteria: r.criteria.map(c => ({ ...c })),
-        results: r.results.map(res => ({ ...res })),
-        conversation: r.conversation.map(m => ({
-            ...m,
-            // Ensure content is string or simple serializable object
-            content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content)
-        }))
-    };
-    fs.writeFileSync(detailJsonPath, JSON.stringify(serializableRecord, null, 2));
-  });
-};
+    try {
+      if (!fs.existsSync(this.outputDir)) {
+        fs.mkdirSync(this.outputDir, { recursive: true });
+      }
+      const resultsSubDir = path.join(this.outputDir, 'details');
+      if (!fs.existsSync(resultsSubDir)) {
+          fs.mkdirSync(resultsSubDir, { recursive: true });
+      }
 
-EvaluationReporter.prototype.generateHtmlOutput = function(records, resultsSubDir) {
-  const overviewHtmlPath = path.join(this.outputDir, 'evaluation-overview.html');
-  let overviewHtml = `
+      this.generateJsonOutput(evaluationRecords, resultsSubDir);
+      this.generateHtmlOutput(evaluationRecords, resultsSubDir);
+
+      console.log(`\nJest Evaluation Report generated at: ${this.outputDir}`);
+    } catch (error) {
+      console.error('Error generating Jest Evaluation Report:', error);
+    }
+  }
+
+  private generateJsonOutput(records: EvaluationRecord[], resultsSubDir: string): void {
+    const overviewJsonPath = path.join(this.outputDir, 'evaluation-overview.json');
+    const overviewData = records.map(r => ({
+      id: r.id,
+      testName: r.testName,
+      testPath: r.testPath,
+      timestamp: r.timestamp,
+      durationMs: r.durationMs,
+      modelId: r.modelId,
+      passed: r.passed,
+      detailsJson: `details/${r.id}.json`,
+      detailsHtml: `details/${r.id}.html`,
+    }));
+    fs.writeFileSync(overviewJsonPath, JSON.stringify(overviewData, null, 2));
+
+    records.forEach(r => {
+      const detailJsonPath = path.join(resultsSubDir, `${r.id}.json`);
+      // Ensure all parts of the record are serializable
+      const serializableRecord = {
+          ...r,
+          criteria: r.criteria.map(c => ({ ...c })),
+          results: r.results.map(res => ({ ...res })),
+          conversation: r.conversation.map(m => ({
+              ...m,
+              // Ensure content is string or simple serializable object
+              content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content)
+          }))
+      };
+      fs.writeFileSync(detailJsonPath, JSON.stringify(serializableRecord, null, 2));
+    });
+  }
+
+  private generateHtmlOutput(records: EvaluationRecord[], resultsSubDir: string): void {
+    const overviewHtmlPath = path.join(this.outputDir, 'evaluation-overview.html');
+    let overviewHtml = `
 <html>
 <head>
   <title>LLM Evaluation Overview</title>
@@ -104,18 +108,18 @@ EvaluationReporter.prototype.generateHtmlOutput = function(records, resultsSubDi
       </thead>
       <tbody>`;
 
-  // Group records by testPath
-  const grouped = {};
-  records.forEach(r => {
-    grouped[r.testPath] = grouped[r.testPath] || [];
-    grouped[r.testPath].push(r);
-  });
-  Object.keys(grouped).forEach(testPath => {
-    // Group header with file name
-    overviewHtml += `
-    <tr class="group-header"><td colspan="6">${this.escapeHtml(path.basename(testPath))}</td></tr>`;
-    grouped[testPath].forEach(r => {
+    // Group records by testPath
+    const grouped: Record<string, EvaluationRecord[]> = {};
+    records.forEach(r => {
+      grouped[r.testPath] = grouped[r.testPath] || [];
+      grouped[r.testPath].push(r);
+    });
+    Object.keys(grouped).forEach(testPath => {
+      // Group header with file name
       overviewHtml += `
+    <tr class="group-header"><td colspan="6">${this.escapeHtml(path.basename(testPath))}</td></tr>`;
+      grouped[testPath].forEach(r => {
+        overviewHtml += `
     <tr>
       <td style="padding-left:20px">${this.escapeHtml(r.testName)}</td>
       <td class="${r.passed ? 'passed' : 'failed'}">${r.passed ? '✅ Passed' : '❌ Failed'}</td>
@@ -124,22 +128,22 @@ EvaluationReporter.prototype.generateHtmlOutput = function(records, resultsSubDi
       <td>${this.escapeHtml(r.modelId)}</td>
       <td><a href="details/${r.id}.html">View Details</a></td>
     </tr>`;
-      this.generateDetailHtmlPage(r, resultsSubDir);
+        this.generateDetailHtmlPage(r, resultsSubDir);
+      });
     });
-  });
 
-  overviewHtml += `
+    overviewHtml += `
       </tbody>
     </table>
   </div>
 </body>
 </html>`;
-  fs.writeFileSync(overviewHtmlPath, overviewHtml);
-};
+    fs.writeFileSync(overviewHtmlPath, overviewHtml);
+  }
 
-EvaluationReporter.prototype.generateDetailHtmlPage = function(record, resultsSubDir) {
-  const detailHtmlPath = path.join(resultsSubDir, `${record.id}.html`);
-  let detailHtmlContent = `
+  private generateDetailHtmlPage(record: EvaluationRecord, resultsSubDir: string): void {
+    const detailHtmlPath = path.join(resultsSubDir, `${record.id}.html`);
+    let detailHtmlContent = `
 <html>
 <head>
   <title>Evaluation Detail: ${this.escapeHtml(record.testName)}</title>
@@ -207,74 +211,75 @@ EvaluationReporter.prototype.generateDetailHtmlPage = function(record, resultsSu
   </div>
 </body>
 </html>`;
-  fs.writeFileSync(detailHtmlPath, detailHtmlContent);
-};
+    fs.writeFileSync(detailHtmlPath, detailHtmlContent);
+  }
 
-EvaluationReporter.prototype.formatMessageHtml = function(message) {
-  let contentHtml = '';
-  if (typeof message.content === 'string') {
-    // Attempt to parse if it's a JSON string (e.g., from previous stringification)
-    try {
-        const parsedContent = JSON.parse(message.content);
-        if (Array.isArray(parsedContent)) { // Vercel AI SDK tool_calls format
-            contentHtml = parsedContent.map(part => {
-                if (part.type === 'tool_calls' && Array.isArray(part.toolCalls)) {
-                    return part.toolCalls.map(tc => 
-                        `<strong>Tool Call: ${tc.toolName}</strong><pre>${this.escapeHtml(JSON.stringify(tc.args, null, 2))}</pre>`
-                    ).join('');
-                }
-                return `<pre>${this.escapeHtml(JSON.stringify(part, null, 2))}</pre>`;
-            }).join('');
-        } else { // If it's some other JSON string
-             contentHtml = `<pre>${this.escapeHtml(JSON.stringify(parsedContent, null, 2))}</pre>`;
-        }
-    } catch (e) { // Not a JSON string, treat as plain text
-        contentHtml = `<pre>${this.escapeHtml(message.content)}</pre>`;
-    }
-  } else if (Array.isArray(message.content)) { // Vercel AI SDK content array
-    contentHtml = message.content.map(part => {
-      if (part.type === 'text') {
-        return `<pre>${this.escapeHtml(part.text)}</pre>`;
-      } else if (part.type === 'tool_calls' && Array.isArray(part.toolCalls)) {
-        return part.toolCalls.map(tc => 
-          `<strong>Tool Call: ${this.escapeHtml(tc.toolName)}</strong><pre>${this.escapeHtml(JSON.stringify(tc.args, null, 2))}</pre>`
-        ).join('');
+  private formatMessageHtml(message: any): string {
+    let contentHtml = '';
+    if (typeof message.content === 'string') {
+      // Attempt to parse if it's a JSON string (e.g., from previous stringification)
+      try {
+          const parsedContent = JSON.parse(message.content);
+          if (Array.isArray(parsedContent)) { // Vercel AI SDK tool_calls format
+              contentHtml = parsedContent.map((part: any) => {
+                  if (part.type === 'tool_calls' && Array.isArray(part.toolCalls)) {
+                      return part.toolCalls.map((tc: any) => 
+                          `<strong>Tool Call: ${tc.toolName}</strong><pre>${this.escapeHtml(JSON.stringify(tc.args, null, 2))}</pre>`
+                      ).join('');
+                  }
+                  return `<pre>${this.escapeHtml(JSON.stringify(part, null, 2))}</pre>`;
+              }).join('');
+          } else { // If it's some other JSON string
+               contentHtml = `<pre>${this.escapeHtml(JSON.stringify(parsedContent, null, 2))}</pre>`;
+          }
+      } catch (e) { // Not a JSON string, treat as plain text
+          contentHtml = `<pre>${this.escapeHtml(message.content)}</pre>`;
       }
-      return `<pre>${this.escapeHtml(JSON.stringify(part, null, 2))}</pre>`; // Fallback for other types
-    }).join('');
-  } else if (typeof message.content === 'object' && message.content !== null) {
-    contentHtml = `<pre>${this.escapeHtml(JSON.stringify(message.content, null, 2))}</pre>`;
-  }
+    } else if (Array.isArray(message.content)) { // Vercel AI SDK content array
+      contentHtml = message.content.map((part: any) => {
+        if (part.type === 'text') {
+          return `<pre>${this.escapeHtml(part.text)}</pre>`;
+        } else if (part.type === 'tool_calls' && Array.isArray(part.toolCalls)) {
+          return part.toolCalls.map((tc: any) => 
+            `<strong>Tool Call: ${this.escapeHtml(tc.toolName)}</strong><pre>${this.escapeHtml(JSON.stringify(tc.args, null, 2))}</pre>`
+          ).join('');
+        }
+        return `<pre>${this.escapeHtml(JSON.stringify(part, null, 2))}</pre>`; // Fallback for other types
+      }).join('');
+    } else if (typeof message.content === 'object' && message.content !== null) {
+      contentHtml = `<pre>${this.escapeHtml(JSON.stringify(message.content, null, 2))}</pre>`;
+    }
 
 
-  // Handle tool_calls if it's a separate property (older Vercel AI SDK style or custom)
-  let toolCallsHtml = '';
-  if (message.tool_calls && Array.isArray(message.tool_calls)) {
-    toolCallsHtml = message.tool_calls.map(tc =>
-        `<strong>Tool Call: ${this.escapeHtml(tc.name || tc.toolName)}</strong><pre>${this.escapeHtml(JSON.stringify(tc.args, null, 2))}</pre>`
-    ).join('');
-  }
+    // Handle tool_calls if it's a separate property (older Vercel AI SDK style or custom)
+    let toolCallsHtml = '';
+    if (message.tool_calls && Array.isArray(message.tool_calls)) {
+      toolCallsHtml = message.tool_calls.map((tc: any) =>
+          `<strong>Tool Call: ${this.escapeHtml(tc.name || tc.toolName)}</strong><pre>${this.escapeHtml(JSON.stringify(tc.args, null, 2))}</pre>`
+      ).join('');
+    }
 
 
-  return `
+    return `
     <div class="message message-${this.escapeHtml(message.role)}">
       <div class="message-role">${this.escapeHtml(message.role.toUpperCase())}</div>
       <div class="message-content">${contentHtml}${toolCallsHtml}</div>
     </div>`;
-};
+  }
 
-EvaluationReporter.prototype.escapeHtml = function(unsafe) {
-  if (unsafe === null || unsafe === undefined) return '';
-  return String(unsafe)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-};
+  private escapeHtml(unsafe: any): string {
+    if (unsafe === null || unsafe === undefined) return '';
+    return String(unsafe)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
 
-EvaluationReporter.prototype.sanitizeFileName = function(name) {
-  return name.replace(/[^a-z0-9_.-]/gi, '_').toLowerCase();
-};
+  private sanitizeFileName(name: string): string {
+    return name.replace(/[^a-z0-9_.-]/gi, '_').toLowerCase();
+  }
+}
 
-module.exports = EvaluationReporter;
+export default EvaluationReporter;

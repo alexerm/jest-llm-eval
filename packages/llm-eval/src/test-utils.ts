@@ -1,5 +1,5 @@
 // @jest-environment jsdom
-import { type ModelMessage, type LanguageModel, type UIMessage, type CoreMessage, generateText, convertToModelMessages, getToolInvocations } from 'ai';
+import { type CoreMessage, type LanguageModel, type Message, generateText, convertToCoreMessages } from 'ai';
 import { type EvaluationCriterionDef, evaluateAiResponse, type EvaluatedCriterionResult, type EvaluationResultWithUsage, type TokenUsage } from './evaluation-utils';
 import util from 'util';
 
@@ -12,11 +12,11 @@ import util from 'util';
  * @returns A combined array of ModelMessage objects representing the full conversation.
  */
 export function combineConversation(
-  initialMessages: UIMessage[] | CoreMessage[] | ModelMessage[],
-  responseMessages: ModelMessage[]
-): ModelMessage[] {
+  initialMessages: Message[] | CoreMessage[],
+  responseMessages: CoreMessage[]
+): CoreMessage[] {
   return [
-    ...(initialMessages as ModelMessage[]),
+    ...(initialMessages as CoreMessage[]),
     ...responseMessages,
   ];
 }
@@ -32,7 +32,7 @@ export interface EvaluationRecord {
   timestamp: string; // ISO string of when the evaluation occurred
   durationMs: number; // How long the evaluation took in milliseconds
   modelId: string; // Identifier for the language model used
-  conversation: ModelMessage[];
+  conversation: CoreMessage[];
   criteria: ReadonlyArray<EvaluationCriterionDef>;
   results: EvaluatedCriterionResult[];
   usage: TokenUsage;
@@ -53,7 +53,7 @@ global.evaluationRecords = global.evaluationRecords || [];
  */
 async function toPassAllCriteria(
   this: jest.MatcherContext,
-  receivedConversation: ModelMessage[],
+  receivedConversation: CoreMessage[],
   criteria: ReadonlyArray<EvaluationCriterionDef>,
   model: LanguageModel
 ): Promise<jest.CustomMatcherResult> { // Added Promise return type for async function
@@ -165,7 +165,7 @@ async function toPassWithConfidence(
  */
 async function toHaveToolCallResult(
   this: jest.MatcherContext,
-  received: ModelMessage[],
+  received: CoreMessage[],
   toolName: string
 ): Promise<jest.CustomMatcherResult> {
 
@@ -187,7 +187,7 @@ async function toHaveToolCallResult(
 /**
  * Pretty-print a conversation array in the terminal with full depth and colors.
  */
-export function printConversation(conversation: ModelMessage[]) {
+export function printConversation(conversation: CoreMessage[]) {
   console.log(util.inspect(conversation, { depth: null, colors: true }));
 }
 
@@ -195,26 +195,26 @@ export function printConversation(conversation: ModelMessage[]) {
 export async function runMultiStepTest(
   userMessages: string[],
   options: {
-    createAgentPrompt: (messages: UIMessage[]) => any;
-    onStep?: (conversation: ModelMessage[], stepIndex: number) => void;
+    createAgentPrompt: (messages: Message[]) => any;
+    onStep?: (conversation: CoreMessage[], stepIndex: number) => void;
   }
-): Promise<ModelMessage[]> {
-  const uiHistory: UIMessage[] = [];
-  let modelHistory: ModelMessage[] = [];
+): Promise<CoreMessage[]> {
+  const uiHistory: Message[] = [];
+  let modelHistory: CoreMessage[] = [];
 
   for (let i = 0; i < userMessages.length; i++) {
     // Create and record UI user message
-    const userMsg: UIMessage = {
+    const userMsg: Message = {
       id: `u${i}`,
       role: 'user',
-      parts: [{ type: 'text', text: userMessages[i] }]
+      content: userMessages[i]
     };
     uiHistory.push(userMsg);
 
     // Append user message to model history
     modelHistory = [
       ...modelHistory,
-      ...convertToModelMessages([userMsg])
+      ...convertToCoreMessages([userMsg])
     ];
 
     // Generate agent response
@@ -259,7 +259,7 @@ function deepPartialMatch(actual: Record<string, any>, expected: Record<string, 
  */
 async function toHaveToolCall(
   this: jest.MatcherContext,
-  received: ModelMessage[],
+  received: CoreMessage[],
   toolName: string,
   expectedArgs?: Record<string, any>
 ): Promise<jest.CustomMatcherResult> {

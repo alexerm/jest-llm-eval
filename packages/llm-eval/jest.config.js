@@ -4,7 +4,18 @@ module.exports = {
   testEnvironment: 'node',
   reporters: [
     'default',
-    ['./src/evaluation-reporter.ts', { outputDir: 'jest-evaluation-results' }]
+    ['./dist/evaluation-reporter.js', { outputDir: 'jest-evaluation-results' }]
   ],
-  setupFilesAfterEnv: ['./src/test-utils.ts'],
+  setupFilesAfterEnv: ['./dist/test-utils.js'],
+  transform: {
+    '^.+\\.ts$': 'ts-jest',
+  },
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
+  testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(spec|test).ts'],
+  collectCoverageFrom: [
+    'src/**/*.ts',
+    '!src/**/*.d.ts',
+    '!src/**/*.test.ts',
+    '!src/**/*.spec.ts',
+  ],
 };
