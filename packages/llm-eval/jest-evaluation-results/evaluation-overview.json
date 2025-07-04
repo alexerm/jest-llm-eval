@@ -1,0 +1,13 @@
+[
+  {
+    "id": "_Users_alex_Projects_upspawn_jest-llm-eval_packages_llm-eval_src_llm-eval_test_ts-LLM_Evals_should_pass_all_criteria-1751657301058",
+    "testName": "LLM Evals should pass all criteria",
+    "testPath": "/Users/alex/Projects/upspawn/jest-llm-eval/packages/llm-eval/src/llm-eval.test.ts",
+    "timestamp": "2025-07-04T19:28:21.058Z",
+    "durationMs": 3142,
+    "modelId": "gpt-4-turbo-preview",
+    "passed": true,
+    "detailsJson": "details/_Users_alex_Projects_upspawn_jest-llm-eval_packages_llm-eval_src_llm-eval_test_ts-LLM_Evals_should_pass_all_criteria-1751657301058.json",
+    "detailsHtml": "details/_Users_alex_Projects_upspawn_jest-llm-eval_packages_llm-eval_src_llm-eval_test_ts-LLM_Evals_should_pass_all_criteria-1751657301058.html"
+  }
+]
