@@ -8,13 +8,15 @@ A powerful Jest extension for evaluating Large Language Model (LLM) responses us
 ## Features
 
 - 🤖 **AI-Powered Assertions**: Evaluate LLM responses using another LLM as a judge
-- 📊 **Rich Reporting**: Generate detailed HTML and JSON reports of evaluation results
+- 🎨 **Beautiful Terminal UI**: Colorful, interactive terminal reports with tables and progress indicators
+- 📊 **Rich Reporting**: Generate detailed HTML, JSON, and terminal reports of evaluation results
 - 🎯 **Flexible Criteria**: Use predefined criteria or create custom evaluation rules
 - 🔧 **Jest Integration**: Seamlessly extends Jest with custom matchers
 - 📈 **Confidence Testing**: Run tests multiple times to ensure reliability
 - 🛠️ **Tool Call Testing**: Verify AI agents make correct tool/function calls
 - 🔄 **Multi-Step Conversations**: Test complex conversation flows
 - 📝 **TypeScript Support**: Full TypeScript definitions included
+- 🖥️ **CLI Viewer**: Interactive command-line tool for viewing reports
 
 ## Installation
 
@@ -185,10 +187,25 @@ module.exports = {
   setupFilesAfterEnv: ['jest-llm-eval/setup'],
   reporters: [
     'default',
-    ['jest-llm-eval/reporter', { outputDir: './evaluation-reports' }]
+    // Choose your preferred reporter(s)
+    ['jest-llm-eval/terminal-reporter', { 
+      theme: 'vibrant',           // 'default', 'minimal', 'vibrant'
+      showDetails: true,          // Show detailed test results
+      compact: false              // Use compact output format
+    }],
+    ['jest-llm-eval/evaluation-reporter', { 
+      outputDir: './evaluation-reports' 
+    }]
   ]
 };
 ```
+
+#### Terminal Reporter Options
+
+- **`theme`**: Choose visual theme (`'default'`, `'minimal'`, `'vibrant'`)
+- **`showDetails`**: Show detailed criteria breakdown (default: `true`)
+- **`compact`**: Use compact output format (default: `false`)
+- **`outputDir`**: Directory for JSON reports (default: `'jest-evaluation-results'`)
 
 ### TypeScript
 
@@ -204,18 +221,52 @@ If using TypeScript, add to your `tsconfig.json`:
 
 ## Reporting
 
-Jest LLM Eval generates comprehensive reports:
+Jest LLM Eval generates comprehensive reports in multiple formats:
 
-- **HTML Reports**: Visual overview of all evaluations with detailed breakdowns
-- **JSON Reports**: Machine-readable data for further analysis
-- **Console Output**: Real-time feedback during test runs
+### 🎨 Terminal Reports
+Beautiful, colorful terminal output with:
+- 📊 **Rich Tables**: Formatted test results with colors and borders
+- 🎯 **Visual Indicators**: Clear pass/fail status with icons
+- 📈 **Summary Statistics**: Success rates, token usage, timing
+- 🔍 **Detailed Breakdowns**: Criteria-by-criteria analysis
+- 🎨 **Multiple Themes**: Default, minimal, and vibrant themes
 
-Reports include:
+### 📊 HTML Reports
+Interactive web reports featuring:
+- 🌐 **Web Interface**: Navigate through results in your browser
+- 📱 **Responsive Design**: Works on desktop and mobile
+- 🔗 **Linked Details**: Click through to detailed conversation views
+- 💾 **Permanent Archive**: Save and share evaluation results
+
+### 📋 JSON Reports
+Machine-readable data for:
+- 🔌 **API Integration**: Process results programmatically
+- 📈 **Analytics**: Build custom dashboards and metrics
+- 🔄 **CI/CD Integration**: Automate evaluation workflows
+
+### 🖥️ CLI Viewer
+Interactive command-line tool for viewing reports:
+
+```bash
+# View latest report with vibrant theme
+npx jest-llm-eval view --theme vibrant
+
+# Show only failed tests
+npx jest-llm-eval view --filter failed
+
+# Custom report location
+npx jest-llm-eval view --report-path ./custom/report.json
+
+# Compact view without details
+npx jest-llm-eval view --no-details
+```
+
+All reports include:
 - ✅ Pass/fail status for each criterion
-- 📊 Token usage statistics
-- 🕐 Execution timing
-- 💬 Full conversation context
-- 🔍 Detailed failure analysis
+- 📊 Token usage statistics and costs
+- 🕐 Execution timing and performance metrics
+- 💬 Full conversation context and history
+- 🔍 Detailed failure analysis and debugging info
 
 ## Best Practices
 
@@ -277,6 +328,7 @@ Check out the `/examples` directory for complete working examples:
 - **Tool Call Testing**: Function calling verification
 - **Confidence Testing**: Reliability testing
 - **Custom Criteria**: Domain-specific evaluation rules
+- **Terminal Reporting**: Showcase beautiful terminal output and CLI features
 
 ## API Reference
 
