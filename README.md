@@ -1,6 +1,6 @@
 # Jest-LLM-Eval Monorepo
 
-[![CI](https://img.shields.io/github/actions/workflow/status/yourusername/jest-llm-eval/ci.yml?branch=main&style=flat-square)](https://github.com/yourusername/jest-llm-eval/actions)
+[![CI](https://img.shields.io/github/actions/workflow/status/alexerm/jest-llm-eval/ci.yml?branch=main&style=flat-square)](https://github.com/alexerm/jest-llm-eval/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
 
 > **AI-powered testing utilities for Large-Language-Model applications, packaged as a Turborepo workspace.**
@@ -25,36 +25,36 @@ This repository hosts **Jest LLM Eval**, a framework that lets you write intent-
 
 ### Prerequisites
 
-* Node.js **16+**
-* pnpm, npm or yarn (examples use **pnpm**)
+* Node.js **18+**
+* npm, pnpm or yarn (examples use **npm**)
 
 ### Install dependencies
 
 ```bash
-pnpm install
+npm install
 ```
 
 ### Build all packages
 
 ```bash
 # Uses Turborepo to cache & parallelise
-pnpm turbo build
+npm run build
 ```
 
 ### Run tests
 
 ```bash
-pnpm turbo test
+npm run test
 ```
 
 ### Develop locally
 
 ```bash
 # Watch src changes & re-run test commands for all packages
-pnpm turbo dev
+npm run dev
 
 # Or focus on a single package
-pnpm turbo dev --filter=llm-eval
+npm run dev -- --filter=llm-eval
 ```
 
 ---
@@ -65,7 +65,7 @@ pnpm turbo dev --filter=llm-eval
 2. Run the release script:
 
    ```bash
-   pnpm --filter llm-eval run build
+   npm run build --workspace=packages/llm-eval
    cd packages/llm-eval && npm publish
    ```
 
@@ -101,7 +101,7 @@ To start hacking on the core package:
 
 ```bash
 # From repo root
-pnpm turbo dev --filter=llm-eval
+npm run dev -- --filter=llm-eval
 ```
 
 The command runs `jest --watch` and recompiles TypeScript on change.
