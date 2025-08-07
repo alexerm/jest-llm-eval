@@ -15,9 +15,34 @@ interface CLIOptions {
   interactive?: boolean;
 }
 
+type ChalkStyle = (text: string) => string;
+
+interface Theme {
+  primary: ChalkStyle;
+  success: ChalkStyle;
+  error: ChalkStyle;
+  warning: ChalkStyle;
+  info: ChalkStyle;
+  muted: ChalkStyle;
+  bold: ChalkStyle;
+  dim: ChalkStyle;
+}
+
+interface ReportData {
+  summary: {
+    totalTests: number;
+    passedTests: number;
+    failedTests: number;
+    successRate: number;
+    avgDuration: number;
+    totalTokens: number;
+  };
+  records: EvaluationRecord[];
+}
+
 class CLIViewer {
   private options: CLIOptions;
-  private theme: any;
+  private theme: Theme;
 
   constructor(options: CLIOptions = {}) {
     this.options = {
@@ -75,28 +100,27 @@ class CLIViewer {
 
       this.displayHeader();
       this.displaySummary(reportData.summary);
-      
+
       if (this.options.details) {
         this.displayRecords(reportData.records);
       }
 
       this.displayFooter();
-
     } catch (error) {
       this.displayError(error as Error);
     }
   }
 
-  private loadReport(): any {
+  private loadReport(): ReportData | null {
     const reportPath = path.resolve(this.options.reportPath!);
-    
+
     if (!fs.existsSync(reportPath)) {
       return null;
     }
 
     try {
       const data = fs.readFileSync(reportPath, 'utf8');
-      return JSON.parse(data);
+      return JSON.parse(data) as ReportData;
     } catch (error) {
       throw new Error(`Failed to parse report file: ${error}`);
     }
@@ -104,17 +128,30 @@ class CLIViewer {
 
   private displayHeader(): void {
     console.log('\n');
-    console.log(this.theme.primary(this.theme.bold('🤖 LLM EVALUATION REPORT VIEWER')));
+    console.log(
+      this.theme.primary(this.theme.bold('🤖 LLM EVALUATION REPORT VIEWER'))
+    );
     console.log(this.theme.muted('━'.repeat(60)));
   }
 
-  private displaySummary(summary: any): void {
+  private displaySummary(summary: ReportData['summary']): void {
     const summaryTable = new Table({
       chars: {
-        'top': '─', 'top-mid': '┬', 'top-left': '┌', 'top-right': '┐',
-        'bottom': '─', 'bottom-mid': '┴', 'bottom-left': '└', 'bottom-right': '┘',
-        'left': '│', 'left-mid': '├', 'mid': '─', 'mid-mid': '┼',
-        'right': '│', 'right-mid': '┤', 'middle': '│'
+        top: '─',
+        'top-mid': '┬',
+        'top-left': '┌',
+        'top-right': '┐',
+        bottom: '─',
+        'bottom-mid': '┴',
+        'bottom-left': '└',
+        'bottom-right': '┘',
+        left: '│',
+        'left-mid': '├',
+        mid: '─',
+        'mid-mid': '┼',
+        right: '│',
+        'right-mid': '┤',
+        middle: '│',
       },
       style: { 'padding-left': 2, 'padding-right': 2 },
     });
@@ -122,7 +159,12 @@ class CLIViewer {
     summaryTable.push(
       ['📊 Total Tests', this.theme.bold(summary.totalTests.toString())],
       ['✅ Passed', this.theme.success(summary.passedTests.toString())],
-      ['❌ Failed', summary.failedTests > 0 ? this.theme.error(summary.failedTests.toString()) : this.theme.muted('0')],
+      [
+        '❌ Failed',
+        summary.failedTests > 0
+          ? this.theme.error(summary.failedTests.toString())
+          : this.theme.muted('0'),
+      ],
       ['📈 Success Rate', this.formatSuccessRate(summary.successRate)],
       ['⏱️  Avg Duration', this.theme.info(`${summary.avgDuration}ms`)],
       ['🔢 Total Tokens', this.theme.info(summary.totalTokens.toLocaleString())]
@@ -143,11 +185,15 @@ class CLIViewer {
     }
 
     if (filteredRecords.length === 0) {
-      console.log(`\n${this.theme.muted('No records match the filter: ' + this.options.filter)}`);
+      console.log(
+        `\n${this.theme.muted('No records match the filter: ' + this.options.filter)}`
+      );
       return;
     }
 
-    console.log(`\n${this.theme.bold('📝 DETAILED RESULTS')} ${this.theme.muted(`(${filteredRecords.length} records)`)}`);
+    console.log(
+      `\n${this.theme.bold('📝 DETAILED RESULTS')} ${this.theme.muted(`(${filteredRecords.length} records)`)}`
+    );
 
     const recordsTable = new Table({
       head: [
@@ -155,13 +201,24 @@ class CLIViewer {
         this.theme.bold('Status'),
         this.theme.bold('Duration'),
         this.theme.bold('Tokens'),
-        this.theme.bold('Model')
+        this.theme.bold('Model'),
       ],
       chars: {
-        'top': '─', 'top-mid': '┬', 'top-left': '┌', 'top-right': '┐',
-        'bottom': '─', 'bottom-mid': '┴', 'bottom-left': '└', 'bottom-right': '┘',
-        'left': '│', 'left-mid': '├', 'mid': '─', 'mid-mid': '┼',
-        'right': '│', 'right-mid': '┤', 'middle': '│'
+        top: '─',
+        'top-mid': '┬',
+        'top-left': '┌',
+        'top-right': '┐',
+        bottom: '─',
+        'bottom-mid': '┴',
+        'bottom-left': '└',
+        'bottom-right': '┘',
+        left: '│',
+        'left-mid': '├',
+        mid: '─',
+        'mid-mid': '┼',
+        right: '│',
+        'right-mid': '┤',
+        middle: '│',
       },
       style: { 'padding-left': 1, 'padding-right': 1 },
       colWidths: [30, 10, 10, 10, 15],
@@ -169,16 +226,16 @@ class CLIViewer {
     });
 
     filteredRecords.forEach(record => {
-      const status = record.passed 
-        ? this.theme.success('✓ PASS') 
+      const status = record.passed
+        ? this.theme.success('✓ PASS')
         : this.theme.error('✗ FAIL');
-      
+
       recordsTable.push([
         this.truncateText(record.testName, 28),
         status,
         this.theme.info(`${record.durationMs}ms`),
         this.theme.info(record.usage?.totalTokens?.toString() || 'N/A'),
-        this.theme.muted(this.truncateText(record.modelId, 13))
+        this.theme.muted(this.truncateText(record.modelId, 13)),
       ]);
     });
 
@@ -193,7 +250,9 @@ class CLIViewer {
         if (failedCriteria.length > 0) {
           console.log(`\n  ${this.theme.bold(record.testName)}:`);
           failedCriteria.forEach(criterion => {
-            console.log(`    • ${this.theme.error(criterion.id)}: ${this.theme.muted(criterion.description)}`);
+            console.log(
+              `    • ${this.theme.error(criterion.id)}: ${this.theme.muted(criterion.description)}`
+            );
           });
         }
       });
@@ -209,9 +268,12 @@ class CLIViewer {
   private displayNoReport(): void {
     const message = boxen(
       this.theme.warning('No evaluation report found!\n\n') +
-      this.theme.muted('Expected location: ') + 
-      this.theme.info(this.options.reportPath!) + '\n\n' +
-      this.theme.muted('Run your Jest tests with the terminal reporter first.'),
+        this.theme.muted('Expected location: ') +
+        this.theme.info(this.options.reportPath!) +
+        '\n\n' +
+        this.theme.muted(
+          'Run your Jest tests with the terminal reporter first.'
+        ),
       {
         padding: 2,
         margin: 1,
@@ -227,7 +289,7 @@ class CLIViewer {
   private displayError(error: Error): void {
     const message = boxen(
       this.theme.error('Error loading report:\n\n') +
-      this.theme.muted(error.message),
+        this.theme.muted(error.message),
       {
         padding: 2,
         margin: 1,
@@ -281,30 +343,27 @@ ${chalk.yellow('Examples:')}
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
-  
+
   if (args.includes('--help') || args.includes('-h')) {
     showHelp();
     return;
   }
 
   const options: CLIOptions = {};
-
-  // Parse command line arguments
-  for (let i = 0; i < args.length; i++) {
-    switch (args[i]) {
-      case '--report-path':
-        options.reportPath = args[++i];
-        break;
-      case '--theme':
-        options.theme = args[++i] as any;
-        break;
-      case '--filter':
-        options.filter = args[++i] as any;
-        break;
-      case '--no-details':
-        options.details = false;
-        break;
-    }
+  if (args.includes('--report-path')) {
+    const index = args.indexOf('--report-path');
+    options.reportPath = args[index + 1];
+  }
+  if (args.includes('--theme')) {
+    const index = args.indexOf('--theme');
+    options.theme = args[index + 1] as CLIOptions['theme'];
+  }
+  if (args.includes('--filter')) {
+    const index = args.indexOf('--filter');
+    options.filter = args[index + 1] as CLIOptions['filter'];
+  }
+  if (args.includes('--no-details')) {
+    options.details = false;
   }
 
   const viewer = new CLIViewer(options);
@@ -317,7 +376,7 @@ export { CLIViewer };
 // Run CLI if called directly
 if (require.main === module) {
   main().catch(error => {
-    console.error(chalk.red('CLI Error:'), error.message);
+    console.error(chalk.red('An unexpected error occurred:'), error);
     process.exit(1);
   });
 }

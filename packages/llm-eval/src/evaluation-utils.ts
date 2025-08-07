@@ -29,16 +29,31 @@ export type EvaluationResultWithUsage = {
 
 // Predefined evaluation criteria with ids and descriptions
 export const CRITERIA = {
-  Welcome: { id: 'welcome', description: 'The response is welcoming to the user' },
-  Relevance: { id: 'relevance', description: 'The response is relevant to the user\'s initial greeting' },
-  LanguageMatch: { id: 'language_match', description: 'The response is in the same language as the user\'s message' },
-  Conciseness: { id: 'conciseness', description: 'The response is concise and to the point' },
-  Professionalism: { id: 'professionalism', description: 'The response maintains a professional tone' },
+  Welcome: {
+    id: 'welcome',
+    description: 'The response is welcoming to the user',
+  },
+  Relevance: {
+    id: 'relevance',
+    description: "The response is relevant to the user's initial greeting",
+  },
+  LanguageMatch: {
+    id: 'language_match',
+    description: "The response is in the same language as the user's message",
+  },
+  Conciseness: {
+    id: 'conciseness',
+    description: 'The response is concise and to the point',
+  },
+  Professionalism: {
+    id: 'professionalism',
+    description: 'The response maintains a professional tone',
+  },
 } as const;
 
 // Type-safe keys and values for predefined criteria
 export type CriterionKey = keyof typeof CRITERIA;
-export type PredefinedCriterion = typeof CRITERIA[CriterionKey];
+export type PredefinedCriterion = (typeof CRITERIA)[CriterionKey];
 
 class CriteriaBuilder {
   private readonly currentCriteria: EvaluationCriterionDef[] = [];
@@ -91,19 +106,26 @@ export async function evaluateAiResponse(
   evaluationModel: LanguageModel,
   messages: CoreMessage[],
   evaluationCriteria: ReadonlyArray<EvaluationCriterionDef>
-): Promise<EvaluationResultWithUsage> { // MODIFIED return type
+): Promise<EvaluationResultWithUsage> {
+  // MODIFIED return type
 
   // Capture the full result from generateObject
   const generateObjectResult = await generateObject({
     model: evaluationModel,
     schema: z.object({
-      criteria: z.array(
-        z.object({
-          id: z.string().describe('Unique identifier for the criteria'), // Changed back to z.string()
-          description: z.string().describe('Description of what is being evaluated'),
-          passed: z.boolean().describe('Whether the criteria was met (Yes/No)')
-        })
-      ).describe('List of evaluation criteria with their outcomes')
+      criteria: z
+        .array(
+          z.object({
+            id: z.string().describe('Unique identifier for the criteria'), // Changed back to z.string()
+            description: z
+              .string()
+              .describe('Description of what is being evaluated'),
+            passed: z
+              .boolean()
+              .describe('Whether the criteria was met (Yes/No)'),
+          })
+        )
+        .describe('List of evaluation criteria with their outcomes'),
     }),
     messages,
     system: `
@@ -116,9 +138,9 @@ export async function evaluateAiResponse(
   // Return both the criteria results and the token usage
   return {
     results: generateObjectResult.object.criteria as EvaluatedCriterionResult[],
-    // The Vercel AI SDK's generateObject returns a 'usage' object with 
+    // The Vercel AI SDK's generateObject returns a 'usage' object with
     // { promptTokens: number; completionTokens: number; totalTokens: number; }
     // This casting assumes generateObjectResult.usage conforms to TokenUsage.
-    usage: generateObjectResult.usage as TokenUsage 
+    usage: generateObjectResult.usage as TokenUsage,
   };
 }

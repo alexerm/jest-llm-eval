@@ -1,33 +1,53 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { EvaluationRecord } from './test-utils';
+import { z, ZodTypeAny } from 'zod';
+import {
+  type Reporter,
+  type TestContext,
+  type AggregatedResult,
+  type ReporterOnStartOptions,
+  type TestResult,
+  type Config,
+} from '@jest/reporters';
+import { CoreMessage } from 'ai';
 
 interface EvaluationReporterOptions {
   outputDir?: string;
 }
 
-class EvaluationReporter {
-  private _globalConfig: any;
+class EvaluationReporter implements Reporter {
+  private _globalConfig: Config.GlobalConfig;
   private _options: EvaluationReporterOptions;
   private outputDir: string;
 
-  constructor(globalConfig: any, options: EvaluationReporterOptions) {
+  constructor(
+    globalConfig: Config.GlobalConfig,
+    options: EvaluationReporterOptions
+  ) {
     this._globalConfig = globalConfig;
     this._options = options;
-    this.outputDir = path.resolve(options.outputDir || 'jest-evaluation-results');
+    this.outputDir = path.resolve(
+      options.outputDir || 'jest-evaluation-results'
+    );
 
-    if (global.evaluationRecords === undefined) {
-      global.evaluationRecords = [];
+    if ((global as any).evaluationRecords === undefined) {
+      (global as any).evaluationRecords = [];
     }
   }
 
-  onRunComplete(contexts: any, results: any): void {
-    const evaluationRecords = global.evaluationRecords;
+  onRunComplete(
+    _contexts: Set<TestContext>,
+    _results: AggregatedResult
+  ): void | Promise<void> {
+    const evaluationRecords = (global as any).evaluationRecords;
     if (!evaluationRecords || evaluationRecords.length === 0) {
       console.log('\nNo evaluation records found to generate a report.');
       return;
     }
-    console.log(`\nGenerating evaluation report with ${evaluationRecords.length} record(s)...`);
+    console.log(
+      `\nGenerating evaluation report with ${evaluationRecords.length} record(s)...`
+    );
 
     try {
       if (!fs.existsSync(this.outputDir)) {
@@ -35,7 +55,7 @@ class EvaluationReporter {
       }
       const resultsSubDir = path.join(this.outputDir, 'details');
       if (!fs.existsSync(resultsSubDir)) {
-          fs.mkdirSync(resultsSubDir, { recursive: true });
+        fs.mkdirSync(resultsSubDir, { recursive: true });
       }
 
       this.generateJsonOutput(evaluationRecords, resultsSubDir);
@@ -47,8 +67,14 @@ class EvaluationReporter {
     }
   }
 
-  private generateJsonOutput(records: EvaluationRecord[], resultsSubDir: string): void {
-    const overviewJsonPath = path.join(this.outputDir, 'evaluation-overview.json');
+  private generateJsonOutput(
+    records: EvaluationRecord[],
+    resultsSubDir: string
+  ): void {
+    const overviewJsonPath = path.join(
+      this.outputDir,
+      'evaluation-overview.json'
+    );
     const overviewData = records.map(r => ({
       id: r.id,
       testName: r.testName,
@@ -66,21 +92,33 @@ class EvaluationReporter {
       const detailJsonPath = path.join(resultsSubDir, `${r.id}.json`);
       // Ensure all parts of the record are serializable
       const serializableRecord = {
-          ...r,
-          criteria: r.criteria.map(c => ({ ...c })),
-          results: r.results.map(res => ({ ...res })),
-          conversation: r.conversation.map(m => ({
-              ...m,
-              // Ensure content is string or simple serializable object
-              content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content)
-          }))
+        ...r,
+        criteria: r.criteria.map(c => ({ ...c })),
+        results: r.results.map(res => ({ ...res })),
+        conversation: r.conversation.map(m => ({
+          ...m,
+          // Ensure content is string or simple serializable object
+          content:
+            typeof m.content === 'string'
+              ? m.content
+              : JSON.stringify(m.content),
+        })),
       };
-      fs.writeFileSync(detailJsonPath, JSON.stringify(serializableRecord, null, 2));
+      fs.writeFileSync(
+        detailJsonPath,
+        JSON.stringify(serializableRecord, null, 2)
+      );
     });
   }
 
-  private generateHtmlOutput(records: EvaluationRecord[], resultsSubDir: string): void {
-    const overviewHtmlPath = path.join(this.outputDir, 'evaluation-overview.html');
+  private generateHtmlOutput(
+    records: EvaluationRecord[],
+    resultsSubDir: string
+  ): void {
+    const overviewHtmlPath = path.join(
+      this.outputDir,
+      'evaluation-overview.html'
+    );
     let overviewHtml = `
 <html>
 <head>
@@ -141,9 +179,12 @@ class EvaluationReporter {
     fs.writeFileSync(overviewHtmlPath, overviewHtml);
   }
 
-  private generateDetailHtmlPage(record: EvaluationRecord, resultsSubDir: string): void {
+  private generateDetailHtmlPage(
+    record: EvaluationRecord,
+    resultsSubDir: string
+  ): void {
     const detailHtmlPath = path.join(resultsSubDir, `${record.id}.html`);
-    let detailHtmlContent = `
+    const detailHtmlContent = `
 <html>
 <head>
   <title>Evaluation Detail: ${this.escapeHtml(record.testName)}</title>
@@ -186,14 +227,18 @@ class EvaluationReporter {
     <table>
       <thead><tr><th>ID</th><th>Description</th><th>Status</th></tr></thead>
       <tbody>
-        ${record.results.map(result => `
+        ${record.results
+          .map(
+            result => `
           <tr>
             <td>${this.escapeHtml(result.id)}</td>
             <td>${this.escapeHtml(result.description)}</td>
             <td class="${result.passed ? 'passed' : 'failed'}">
               ${result.passed ? '✅ Passed' : '❌ Failed'}
             </td>
-          </tr>`).join('')}
+          </tr>`
+          )
+          .join('')}
       </tbody>
     </table>
 
@@ -214,71 +259,69 @@ class EvaluationReporter {
     fs.writeFileSync(detailHtmlPath, detailHtmlContent);
   }
 
-  private formatMessageHtml(message: any): string {
+  private formatMessageHtml(message: CoreMessage): string {
     let contentHtml = '';
     if (typeof message.content === 'string') {
-      // Attempt to parse if it's a JSON string (e.g., from previous stringification)
-      try {
-          const parsedContent = JSON.parse(message.content);
-          if (Array.isArray(parsedContent)) { // Vercel AI SDK tool_calls format
-              contentHtml = parsedContent.map((part: any) => {
-                  if (part.type === 'tool_calls' && Array.isArray(part.toolCalls)) {
-                      return part.toolCalls.map((tc: any) => 
-                          `<strong>Tool Call: ${tc.toolName}</strong><pre>${this.escapeHtml(JSON.stringify(tc.args, null, 2))}</pre>`
-                      ).join('');
-                  }
-                  return `<pre>${this.escapeHtml(JSON.stringify(part, null, 2))}</pre>`;
-              }).join('');
-          } else { // If it's some other JSON string
-               contentHtml = `<pre>${this.escapeHtml(JSON.stringify(parsedContent, null, 2))}</pre>`;
-          }
-      } catch (e) { // Not a JSON string, treat as plain text
-          contentHtml = `<pre>${this.escapeHtml(message.content)}</pre>`;
-      }
-    } else if (Array.isArray(message.content)) { // Vercel AI SDK content array
-      contentHtml = message.content.map((part: any) => {
-        if (part.type === 'text') {
-          return `<pre>${this.escapeHtml(part.text)}</pre>`;
-        } else if (part.type === 'tool_calls' && Array.isArray(part.toolCalls)) {
-          return part.toolCalls.map((tc: any) => 
-            `<strong>Tool Call: ${this.escapeHtml(tc.toolName)}</strong><pre>${this.escapeHtml(JSON.stringify(tc.args, null, 2))}</pre>`
-          ).join('');
-        }
-        return `<pre>${this.escapeHtml(JSON.stringify(part, null, 2))}</pre>`; // Fallback for other types
-      }).join('');
-    } else if (typeof message.content === 'object' && message.content !== null) {
-      contentHtml = `<pre>${this.escapeHtml(JSON.stringify(message.content, null, 2))}</pre>`;
+      contentHtml = this.formatStringContent(message.content);
+    } else if (Array.isArray(message.content)) {
+      contentHtml = message.content.map(part => this.formatPart(part)).join('');
     }
-
-
-    // Handle tool_calls if it's a separate property (older Vercel AI SDK style or custom)
-    let toolCallsHtml = '';
-    if (message.tool_calls && Array.isArray(message.tool_calls)) {
-      toolCallsHtml = message.tool_calls.map((tc: any) =>
-          `<strong>Tool Call: ${this.escapeHtml(tc.name || tc.toolName)}</strong><pre>${this.escapeHtml(JSON.stringify(tc.args, null, 2))}</pre>`
-      ).join('');
-    }
-
 
     return `
-    <div class="message message-${this.escapeHtml(message.role)}">
-      <div class="message-role">${this.escapeHtml(message.role.toUpperCase())}</div>
-      <div class="message-content">${contentHtml}${toolCallsHtml}</div>
-    </div>`;
+          <div class="message message-role-${message.role}">
+            <div class="message-role">${this.escapeHtml(
+              message.role.toUpperCase()
+            )}</div>
+            <div class="message-content">${contentHtml}</div>
+          </div>`;
   }
 
-  private escapeHtml(unsafe: any): string {
-    if (unsafe === null || unsafe === undefined) return '';
-    return String(unsafe)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
+  private formatStringContent(content: string): string {
+    try {
+      const parsedContent = JSON.parse(content);
+      return `<pre>${this.escapeHtml(
+        JSON.stringify(parsedContent, null, 2)
+      )}</pre>`;
+    } catch {
+      return `<pre>${this.escapeHtml(content)}</pre>`;
+    }
+  }
+
+  private formatPart(part: CoreMessage['content'][number]): string {
+    if (typeof part === 'string') {
+      return `<pre>${this.escapeHtml(part)}</pre>`;
+    }
+    if (part.type === 'text') {
+      return `<pre>${this.escapeHtml(part.text)}</pre>`;
+    } else if (part.type === 'tool-call') {
+      return `<strong>Tool Call: ${this.escapeHtml(
+        part.toolName
+      )}</strong><pre>${this.escapeHtml(
+        JSON.stringify(part.args, null, 2)
+      )}</pre>`;
+    }
+    return `<pre>${this.escapeHtml(JSON.stringify(part, null, 2))}</pre>`;
+  }
+
+  private escapeHtml(unsafe: string): string {
+    if (typeof unsafe !== 'string') {
+      // In case something other than a string is passed, stringify it
+      unsafe = JSON.stringify(unsafe, null, 2);
+    }
+    return unsafe
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
   }
 
   private sanitizeFileName(name: string): string {
     return name.replace(/[^a-z0-9_.-]/gi, '_').toLowerCase();
+  }
+
+  getLastError(): void {
+    // This reporter does not track errors
   }
 }
 

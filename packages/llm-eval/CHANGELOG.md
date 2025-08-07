@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2025-01-04
 
 ### Added
+
 - Initial release of Jest LLM Eval
 - AI-powered test assertions using `toPassAllCriteria` matcher
 - Confidence testing with `toPassWithConfidence` matcher
@@ -23,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Example implementations for common use cases
 
 ### Features
+
 - 🤖 **AI-Powered Assertions**: Evaluate LLM responses using another LLM as a judge
 - 📊 **Rich Reporting**: Generate detailed HTML and JSON reports of evaluation results
 - 🎯 **Flexible Criteria**: Use predefined criteria or create custom evaluation rules
@@ -33,11 +35,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📝 **TypeScript Support**: Full TypeScript definitions included
 
 ### Dependencies
+
 - ai: ^3.1.1 (Vercel AI SDK)
 - zod: ^3.23.8 (Schema validation)
 - Jest: ^29.0.0+ (peer dependency)
 
 ### Documentation
+
 - Comprehensive README with examples
 - API reference documentation
 - Best practices guide

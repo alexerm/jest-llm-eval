@@ -4,7 +4,7 @@ import { generateText } from 'ai';
 
 /**
  * Confidence Testing Example
- * 
+ *
  * This example demonstrates how to test AI responses multiple times
  * to ensure consistency and reliability, especially important for
  * non-deterministic AI models.
@@ -19,7 +19,7 @@ describe('Confidence Testing', () => {
     .add(CRITERIA.Relevance)
     .add({
       id: 'helpful_response',
-      description: 'The response provides helpful and actionable advice'
+      description: 'The response provides helpful and actionable advice',
     })
     .build();
 
@@ -27,19 +27,20 @@ describe('Confidence Testing', () => {
     const testFunction = async () => {
       const result = await generateText({
         model: aiModel,
-        prompt: 'A user asks: "How can I improve my productivity while working from home?" Please provide a helpful response.',
+        prompt:
+          'A user asks: "How can I improve my productivity while working from home?" Please provide a helpful response.',
         temperature: 0.7, // Some randomness to test consistency
       });
 
       const conversation = [
         {
           role: 'user' as const,
-          content: 'How can I improve my productivity while working from home?'
+          content: 'How can I improve my productivity while working from home?',
         },
         {
           role: 'assistant' as const,
-          content: result.text
-        }
+          content: result.text,
+        },
       ];
 
       await expect(conversation).toPassAllCriteria(criteria, evaluationModel);
@@ -48,7 +49,7 @@ describe('Confidence Testing', () => {
     // Run the test 5 times, require 80% success rate
     await expect(testFunction).toPassWithConfidence({
       iterations: 5,
-      minSuccessRate: 0.8
+      minSuccessRate: 0.8,
     });
   });
 
@@ -57,14 +58,15 @@ describe('Confidence Testing', () => {
       'What is the meaning of life?',
       'Tell me a joke about programming',
       'How do I center a div in CSS?',
-      'What\'s the best programming language?',
-      'How do I deal with imposter syndrome?'
+      "What's the best programming language?",
+      'How do I deal with imposter syndrome?',
     ];
 
     const testFunction = async () => {
       // Pick a random edge case
-      const randomCase = edgeCases[Math.floor(Math.random() * edgeCases.length)];
-      
+      const randomCase =
+        edgeCases[Math.floor(Math.random() * edgeCases.length)];
+
       const result = await generateText({
         model: aiModel,
         prompt: `A user asks: "${randomCase}" Please provide a helpful and appropriate response.`,
@@ -74,12 +76,12 @@ describe('Confidence Testing', () => {
       const conversation = [
         {
           role: 'user' as const,
-          content: randomCase
+          content: randomCase,
         },
         {
           role: 'assistant' as const,
-          content: result.text
-        }
+          content: result.text,
+        },
       ];
 
       const edgeCaseCriteria = defineEvaluationCriteria()
@@ -87,17 +89,21 @@ describe('Confidence Testing', () => {
         .add(CRITERIA.Relevance)
         .add({
           id: 'appropriate_response',
-          description: 'The response is appropriate for the question asked, even if the question is unconventional'
+          description:
+            'The response is appropriate for the question asked, even if the question is unconventional',
         })
         .build();
 
-      await expect(conversation).toPassAllCriteria(edgeCaseCriteria, evaluationModel);
+      await expect(conversation).toPassAllCriteria(
+        edgeCaseCriteria,
+        evaluationModel
+      );
     };
 
     // Test with higher iteration count for edge cases
     await expect(testFunction).toPassWithConfidence({
       iterations: 10,
-      minSuccessRate: 0.7 // Lower success rate for edge cases
+      minSuccessRate: 0.7, // Lower success rate for edge cases
     });
   });
 
@@ -108,57 +114,62 @@ describe('Confidence Testing', () => {
       const testFunction = async () => {
         const result = await generateText({
           model: aiModel,
-          prompt: 'A user asks: "Explain the concept of recursion in programming." Please provide a clear and educational response.',
+          prompt:
+            'A user asks: "Explain the concept of recursion in programming." Please provide a clear and educational response.',
           temperature: temperature,
         });
 
         const conversation = [
           {
             role: 'user' as const,
-            content: 'Explain the concept of recursion in programming.'
+            content: 'Explain the concept of recursion in programming.',
           },
           {
             role: 'assistant' as const,
-            content: result.text
-          }
+            content: result.text,
+          },
         ];
 
         const technicalCriteria = defineEvaluationCriteria()
           .add(CRITERIA.Relevance)
           .add({
             id: 'technical_accuracy',
-            description: 'The explanation of recursion is technically accurate'
+            description: 'The explanation of recursion is technically accurate',
           })
           .add({
             id: 'clear_explanation',
-            description: 'The explanation is clear and easy to understand'
+            description: 'The explanation is clear and easy to understand',
           })
           .add({
             id: 'includes_example',
-            description: 'The response includes a practical example or analogy'
+            description: 'The response includes a practical example or analogy',
           })
           .build();
 
-        await expect(conversation).toPassAllCriteria(technicalCriteria, evaluationModel);
+        await expect(conversation).toPassAllCriteria(
+          technicalCriteria,
+          evaluationModel
+        );
       };
 
       await expect(testFunction).toPassWithConfidence({
         iterations: 3,
-        minSuccessRate: 0.8
+        minSuccessRate: 0.8,
       });
     }
   });
 
   test('AI handles complex multi-part questions consistently', async () => {
     const complexQuestions = [
-      'I\'m building a web app with React and Node.js. How do I handle authentication, what database should I use, and how do I deploy it?',
+      "I'm building a web app with React and Node.js. How do I handle authentication, what database should I use, and how do I deploy it?",
       'I want to switch careers from marketing to software development. What programming languages should I learn, how long will it take, and what job opportunities are available?',
-      'My startup is growing rapidly. How do I scale my infrastructure, manage my team, and maintain code quality as we expand?'
+      'My startup is growing rapidly. How do I scale my infrastructure, manage my team, and maintain code quality as we expand?',
     ];
 
     const testFunction = async () => {
-      const question = complexQuestions[Math.floor(Math.random() * complexQuestions.length)];
-      
+      const question =
+        complexQuestions[Math.floor(Math.random() * complexQuestions.length)];
+
       const result = await generateText({
         model: aiModel,
         prompt: `A user asks: "${question}" Please provide a comprehensive and structured response.`,
@@ -168,36 +179,40 @@ describe('Confidence Testing', () => {
       const conversation = [
         {
           role: 'user' as const,
-          content: question
+          content: question,
         },
         {
           role: 'assistant' as const,
-          content: result.text
-        }
+          content: result.text,
+        },
       ];
 
       const complexCriteria = defineEvaluationCriteria()
         .add(CRITERIA.Relevance)
         .add({
           id: 'comprehensive_coverage',
-          description: 'The response addresses all parts of the multi-part question'
+          description:
+            'The response addresses all parts of the multi-part question',
         })
         .add({
           id: 'structured_response',
-          description: 'The response is well-structured and organized'
+          description: 'The response is well-structured and organized',
         })
         .add({
           id: 'actionable_advice',
-          description: 'The response provides actionable, practical advice'
+          description: 'The response provides actionable, practical advice',
         })
         .build();
 
-      await expect(conversation).toPassAllCriteria(complexCriteria, evaluationModel);
+      await expect(conversation).toPassAllCriteria(
+        complexCriteria,
+        evaluationModel
+      );
     };
 
     await expect(testFunction).toPassWithConfidence({
       iterations: 6,
-      minSuccessRate: 0.75
+      minSuccessRate: 0.75,
     });
   });
 });

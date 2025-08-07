@@ -1,17 +1,19 @@
 {
   "name": "jest-llm-eval",
   "private": true,
+  "type": "module",
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
+    "test": "turbo run test",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types"
   },
   "devDependencies": {
-    "prettier": "^3.6.0",
-    "turbo": "^2.5.4",
-    "typescript": "5.8.2"
+    "prettier": "^3.3.3",
+    "turbo": "^2.0.9",
+    "typescript": "5.5.4"
   },
   "engines": {
     "node": ">=18"

@@ -11,13 +11,13 @@ This repository hosts **Jest LLM Eval**, a framework that lets you write intent-
 
 ## Packages
 
-| Package | Version | Description |
-| ------- | ------- | ----------- |
-| [`packages/llm-eval`](./packages/llm-eval) | ![npm](https://img.shields.io/npm/v/jest-llm-eval.svg?label=jest-llm-eval&style=flat-square) | The core library: custom Jest matchers, CLI viewer, terminal/html reporters. |
-| [`packages/eslint-config`](./packages/eslint-config) | – | Opinionated ESLint rules for TypeScript & React (re-exporting `eslint-config-next`, `prettier`, etc.). |
-| [`packages/typescript-config`](./packages/typescript-config) | – | Shared `tsconfig` presets for apps & packages. |
+| Package                                                      | Version                                                                                      | Description                                                                                            |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| [`packages/llm-eval`](./packages/llm-eval)                   | ![npm](https://img.shields.io/npm/v/jest-llm-eval.svg?label=jest-llm-eval&style=flat-square) | The core library: custom Jest matchers, CLI viewer, terminal/html reporters.                           |
+| [`packages/eslint-config`](./packages/eslint-config)         | –                                                                                            | Opinionated ESLint rules for TypeScript & React (re-exporting `eslint-config-next`, `prettier`, etc.). |
+| [`packages/typescript-config`](./packages/typescript-config) | –                                                                                            | Shared `tsconfig` presets for apps & packages.                                                         |
 
-> **Note:** `apps/` is intentionally empty – this repo focuses on *libraries*, but it can be extended with demo apps if needed.
+> **Note:** `apps/` is intentionally empty – this repo focuses on _libraries_, but it can be extended with demo apps if needed.
 
 ---
 
@@ -25,8 +25,8 @@ This repository hosts **Jest LLM Eval**, a framework that lets you write intent-
 
 ### Prerequisites
 
-* Node.js **18+**
-* npm, pnpm or yarn (examples use **npm**)
+- Node.js **18+**
+- npm, pnpm or yarn (examples use **npm**)
 
 ### Install dependencies
 
@@ -61,7 +61,7 @@ npm run dev -- --filter=llm-eval
 
 ## Publishing a new version
 
-1. Bump the version in `packages/llm-eval/package.json` (follow semver).  
+1. Bump the version in `packages/llm-eval/package.json` (follow semver).
 2. Run the release script:
 
    ```bash

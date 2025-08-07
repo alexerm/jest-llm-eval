@@ -19,6 +19,8 @@ export const config = [
     },
     rules: {
       "turbo/no-undeclared-env-vars": "warn",
+      "no-dupe-class-members": "off",
+      "@typescript-eslint/no-dupe-class-members": "error"
     },
   },
   {

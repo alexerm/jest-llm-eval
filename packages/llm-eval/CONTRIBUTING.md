@@ -5,17 +5,20 @@ Thank you for your interest in contributing to Jest LLM Eval! We welcome contrib
 ## Development Setup
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/yourusername/jest-llm-eval.git
    cd jest-llm-eval/packages/llm-eval
    ```
 
 2. **Install dependencies**
+
    ```bash
    npm install
    ```
 
 3. **Build the project**
+
    ```bash
    npm run build
    ```
@@ -30,6 +33,7 @@ Thank you for your interest in contributing to Jest LLM Eval! We welcome contrib
 ### Making Changes
 
 1. **Create a feature branch**
+
    ```bash
    git checkout -b feature/your-feature-name
    ```
@@ -40,6 +44,7 @@ Thank you for your interest in contributing to Jest LLM Eval! We welcome contrib
    - Update documentation as needed
 
 3. **Test your changes**
+
    ```bash
    npm run build
    npm test
@@ -75,6 +80,7 @@ Thank you for your interest in contributing to Jest LLM Eval! We welcome contrib
 ## Submitting Changes
 
 1. **Push your branch**
+
    ```bash
    git push origin feature/your-feature-name
    ```

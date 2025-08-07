@@ -1,7 +1,20 @@
 // @jest-environment jsdom
-import { type CoreMessage, type LanguageModel, type Message, generateText, convertToCoreMessages } from 'ai';
-import { type EvaluationCriterionDef, evaluateAiResponse, type EvaluatedCriterionResult, type EvaluationResultWithUsage, type TokenUsage } from './evaluation-utils';
+import {
+  type CoreMessage,
+  type LanguageModel,
+  type Message,
+  generateText,
+  convertToCoreMessages,
+} from 'ai';
+import {
+  type EvaluationCriterionDef,
+  evaluateAiResponse,
+  type EvaluatedCriterionResult,
+  type EvaluationResultWithUsage,
+  type TokenUsage,
+} from './evaluation-utils';
 import util from 'util';
+import { z, ZodTypeAny } from 'zod';
 
 /**
  * Combines two arrays of messages into a single conversation array.
@@ -15,10 +28,7 @@ export function combineConversation(
   initialMessages: Message[] | CoreMessage[],
   responseMessages: CoreMessage[]
 ): CoreMessage[] {
-  return [
-    ...(initialMessages as CoreMessage[]),
-    ...responseMessages,
-  ];
+  return [...(initialMessages as CoreMessage[]), ...responseMessages];
 }
 
 // This type is essentially EvaluatedCriterionResult[], kept for potential distinct usage or can be removed.
@@ -39,14 +49,9 @@ export interface EvaluationRecord {
   passed: boolean; // Overall pass/fail status for this evaluation
 }
 
-// Declare a global variable to store evaluation records
-declare global {
-  // eslint-disable-next-line no-var
-  var evaluationRecords: EvaluationRecord[];
-}
-
 // Initialize the global store if it doesn't exist
-global.evaluationRecords = global.evaluationRecords || [];
+(global as unknown as NodeJS.Global).evaluationRecords =
+  (global as unknown as NodeJS.Global).evaluationRecords || [];
 
 /**
  * Custom matcher: expect(conversation).toPassAllCriteria(evaluationCriteria, evaluationModel)
@@ -56,7 +61,7 @@ async function toPassAllCriteria(
   receivedConversation: CoreMessage[],
   criteria: ReadonlyArray<EvaluationCriterionDef>,
   model: LanguageModel
-): Promise<jest.CustomMatcherResult> { // Added Promise return type for async function
+): Promise<jest.CustomMatcherResult> {
   const startTime = Date.now();
 
   if (!receivedConversation) {
@@ -67,22 +72,30 @@ async function toPassAllCriteria(
   }
   if (!criteria || criteria.length === 0) {
     return {
-      message: () => 'Expected evaluation criteria (EvaluationCriterionDef[]) to be provided.',
+      message: () =>
+        'Expected evaluation criteria (EvaluationCriterionDef[]) to be provided.',
       pass: false,
     };
   }
   if (!model) {
     return {
-      message: () => 'Expected an evaluation model (LanguageModel) to be provided.',
+      message: () =>
+        'Expected an evaluation model (LanguageModel) to be provided.',
       pass: false,
     };
   }
 
-  const evaluationData = await evaluateAiResponse(model, receivedConversation, criteria);
+  const evaluationData = await evaluateAiResponse(
+    model,
+    receivedConversation,
+    criteria
+  );
   const endTime = Date.now();
   const durationMs = endTime - startTime;
 
-  const allPassed = Array.isArray(evaluationData.results) && evaluationData.results.every((c) => c.passed);
+  const allPassed =
+    Array.isArray(evaluationData.results) &&
+    evaluationData.results.every(c => c.passed);
 
   // Attempt to get a model identifier
   let modelId = 'Unknown Model';
@@ -111,16 +124,20 @@ async function toPassAllCriteria(
     passed: allPassed,
   };
 
-  global.evaluationRecords.push(record);
+  (global as unknown as NodeJS.Global).evaluationRecords.push(record);
 
   if (allPassed) {
     return { message: () => `expected all criteria not to pass`, pass: true };
   } else {
     const failed = evaluationData.results
-      .filter((c) => !c.passed)
-      .map((c) => `${c.id}: ${c.description}`)
+      .filter(c => !c.passed)
+      .map(c => `${c.id}: ${c.description}`)
       .join('\n  ');
-    return { message: () => `expected all criteria to pass, but these failed:\n  ${failed}`, pass: false };
+    return {
+      message: () =>
+        `expected all criteria to pass, but these failed:\n  ${failed}`,
+      pass: false,
+    };
   }
 }
 
@@ -129,11 +146,11 @@ async function toPassAllCriteria(
  */
 async function toPassWithConfidence(
   this: jest.MatcherContext,
-  receivedTestFn: () => Promise<any>,
+  receivedTestFn: () => Promise<z.infer<ZodTypeAny>>,
   options: { iterations?: number; minSuccessRate?: number } = {}
 ) {
   const { iterations = 10, minSuccessRate = 0.8 } = options;
-  
+
   const results = await Promise.allSettled(
     Array(iterations)
       .fill(0)
@@ -143,20 +160,33 @@ async function toPassWithConfidence(
           return true;
         } catch (error: unknown) {
           // Log the error message for the failed iteration
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          console.log(`Iteration ${i + 1}/${iterations} failed: ${errorMessage}`);
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          console.log(
+            `Iteration ${i + 1}/${iterations} failed: ${errorMessage}`
+          );
           return false;
         }
       })
   );
-  
-  const successes = results.filter((r) => r.status === 'fulfilled' && r.value).length;
+
+  const successes = results.filter(
+    r => r.status === 'fulfilled' && r.value
+  ).length;
   const successRate = successes / iterations;
-  
+
   if (successRate >= minSuccessRate) {
-    return { message: () => `expected success rate (${successRate.toFixed(2)}) for test function not to be >= ${minSuccessRate}`, pass: true };
+    return {
+      message: () =>
+        `expected success rate (${successRate.toFixed(2)}) for test function not to be >= ${minSuccessRate}`,
+      pass: true,
+    };
   } else {
-    return { message: () => `expected success rate for test function to be >= ${minSuccessRate}, but got ${successRate.toFixed(2)} (${successes}/${iterations} passed)`, pass: false };
+    return {
+      message: () =>
+        `expected success rate for test function to be >= ${minSuccessRate}, but got ${successRate.toFixed(2)} (${successes}/${iterations} passed)`,
+      pass: false,
+    };
   }
 }
 
@@ -168,12 +198,12 @@ async function toHaveToolCallResult(
   received: CoreMessage[],
   toolName: string
 ): Promise<jest.CustomMatcherResult> {
-
-  const calls = received.filter(msg => msg.role === 'tool');  
+  const calls = received.filter(msg => msg.role === 'tool');
   // Check each tool message's content entries for the specified toolName
-  const hasCall = calls.some((call: any) =>
-    Array.isArray(call.content) &&
-    call.content.some((entry: any) => entry.toolName === toolName)
+  const hasCall = calls.some(
+    (call: any) =>
+      Array.isArray(call.content) &&
+      call.content.some((entry: any) => entry.toolName === toolName)
   );
   return {
     pass: hasCall,
@@ -195,7 +225,7 @@ export function printConversation(conversation: CoreMessage[]) {
 export async function runMultiStepTest(
   userMessages: string[],
   options: {
-    createAgentPrompt: (messages: Message[]) => any;
+    createAgentPrompt: (messages: Message[]) => z.infer<ZodTypeAny>;
     onStep?: (conversation: CoreMessage[], stepIndex: number) => void;
   }
 ): Promise<CoreMessage[]> {
@@ -207,15 +237,12 @@ export async function runMultiStepTest(
     const userMsg: Message = {
       id: `u${i}`,
       role: 'user',
-      content: userMessages[i]
+      content: userMessages[i],
     };
     uiHistory.push(userMsg);
 
     // Append user message to model history
-    modelHistory = [
-      ...modelHistory,
-      ...convertToCoreMessages([userMsg])
-    ];
+    modelHistory = [...modelHistory, ...convertToCoreMessages([userMsg])];
 
     // Generate agent response
     const agentConfig = options.createAgentPrompt(uiHistory);
@@ -223,10 +250,7 @@ export async function runMultiStepTest(
     const assistantMsgs = result.response.messages;
 
     // Append assistant messages
-    modelHistory = [
-      ...modelHistory,
-      ...assistantMsgs
-    ];
+    modelHistory = [...modelHistory, ...assistantMsgs];
 
     // Invoke step callback if supplied
     if (options.onStep) {
@@ -239,7 +263,10 @@ export async function runMultiStepTest(
 }
 
 // Helper: deep partial match (all keys in expected must be present and equal in actual)
-function deepPartialMatch(actual: Record<string, any>, expected: Record<string, any>): boolean {
+function deepPartialMatch(
+  actual: Record<string, z.infer<ZodTypeAny>>,
+  expected: Record<string, z.infer<ZodTypeAny>>
+): boolean {
   if (!expected) return true;
   if (!actual) return false;
   return Object.entries(expected).every(([key, val]) => {
@@ -248,7 +275,9 @@ function deepPartialMatch(actual: Record<string, any>, expected: Record<string, 
     }
     if (Array.isArray(val)) {
       // For arrays, require shallow equality
-      return Array.isArray(actual[key]) && val.every((v, i) => actual[key][i] === v);
+      return (
+        Array.isArray(actual[key]) && val.every((v, i) => actual[key][i] === v)
+      );
     }
     return actual[key] === val;
   });
@@ -261,7 +290,7 @@ async function toHaveToolCall(
   this: jest.MatcherContext,
   received: CoreMessage[],
   toolName: string,
-  expectedArgs?: Record<string, any>
+  expectedArgs?: Record<string, z.infer<ZodTypeAny>>
 ): Promise<jest.CustomMatcherResult> {
   const assistantMsgs = received.filter(msg => msg.role === 'assistant');
   let found = false;
@@ -270,10 +299,20 @@ async function toHaveToolCall(
   for (const msg of assistantMsgs) {
     if (Array.isArray(msg.content)) {
       for (const entry of msg.content) {
-        if (entry && entry.type === 'tool-call' && entry.toolName === toolName) {
+        if (
+          entry &&
+          entry.type === 'tool-call' &&
+          entry.toolName === toolName
+        ) {
           found = true;
           actualArgs = entry.args;
-          if (!expectedArgs || deepPartialMatch(entry.args as Record<string, any>, expectedArgs)) {
+          if (
+            !expectedArgs ||
+            deepPartialMatch(
+              entry.args as Record<string, z.infer<ZodTypeAny>>,
+              expectedArgs
+            )
+          ) {
             foundWithArgs = true;
             break;
           }
@@ -294,20 +333,32 @@ async function toHaveToolCall(
 }
 
 // Register custom matchers and augment types
-expect.extend({ toPassAllCriteria, toPassWithConfidence, toHaveToolCallResult, toHaveToolCall });
-
-declare global {
-  namespace jest {
-    interface Matchers<R> {
-      toPassAllCriteria(criteria: ReadonlyArray<EvaluationCriterionDef>, model: LanguageModel): R;
-      toPassWithConfidence(options?: { iterations?: number; minSuccessRate?: number }): R;
-      toHaveToolCallResult(toolName: string): R;
-      /**
-       * Checks that an assistant message contains a tool-call with the given toolName (and optionally, matching args)
-       * @param toolName The name of the tool
-       * @param expectedArgs (optional) Partial args to match
-       */
-      toHaveToolCall(toolName: string, expectedArgs?: Record<string, any>): R;
-    }
+declare module 'expect' {
+  interface Matchers<R> {
+    toPassAllCriteria(
+      criteria: ReadonlyArray<EvaluationCriterionDef>,
+      model: LanguageModel
+    ): R;
+    toPassWithConfidence(options?: {
+      iterations?: number;
+      minSuccessRate?: number;
+    }): R;
+    toHaveToolCallResult(toolName: string): R;
+    /**
+     * Checks that an assistant message contains a tool-call with the given toolName (and optionally, matching args)
+     * @param toolName The name of the tool
+     * @param expectedArgs (optional) Partial args to match
+     */
+    toHaveToolCall(
+      toolName: string,
+      expectedArgs?: Record<string, z.infer<ZodTypeAny>>
+    ): R;
   }
 }
+
+expect.extend({
+  toPassAllCriteria,
+  toPassWithConfidence,
+  toHaveToolCall,
+  toHaveToolCallResult,
+});

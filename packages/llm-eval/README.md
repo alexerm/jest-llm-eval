@@ -11,19 +11,28 @@
 
 ## Table of Contents
 
-1. [Why Jest LLM Eval?](#why)
-2. [Features](#features)
-3. [Installation](#installation)
-4. [Quick Start](#quick-start)
-5. [Folder Structure](#folder-structure)
-6. [Using the CLI Viewer](#cli)
-7. [Jest Configuration](#jest-configuration)
-8. [Advanced Usage](#advanced-usage)
-9. [API Reference](#api-reference)
-10. [Examples](#examples)
-11. [Contributing](#contributing)
-12. [License](#license)
-13. [Support](#support)
+- [Jest LLM Eval](#jest-llm-eval)
+  - [Table of Contents](#table-of-contents)
+  - [Why Jest LLM Eval?](#why-jest-llm-eval)
+  - [Features](#features)
+  - [Installation](#installation)
+  - [Quick Start](#quick-start)
+  - [Folder Structure](#folder-structure)
+  - [Using the CLI Viewer](#using-the-cli-viewer)
+  - [Jest Configuration](#jest-configuration)
+    - [TypeScript](#typescript)
+  - [Advanced Usage](#advanced-usage)
+    - [Confidence Testing](#confidence-testing)
+    - [Multi-Step Conversations](#multi-step-conversations)
+    - [Tool / Function Call Assertions](#tool--function-call-assertions)
+  - [API Reference](#api-reference)
+    - [Builders \& Helpers](#builders--helpers)
+    - [Predefined Criteria (`CRITERIA` enum)](#predefined-criteria-criteria-enum)
+    - [Result Types (simplified)](#result-types-simplified)
+  - [Examples](#examples)
+  - [Contributing](#contributing)
+  - [License](#license)
+  - [Support](#support)
 
 ---
 
@@ -31,25 +40,25 @@
 
 Traditional unit tests struggle with AI output:
 
-* Unpredictable, non-deterministic responses.
-* Multiple correct answers with different wording.
-* String equality or regex matching quickly becomes brittle.
+- Unpredictable, non-deterministic responses.
+- Multiple correct answers with different wording.
+- String equality or regex matching quickly becomes brittle.
 
-**Jest LLM Eval** lets you write *intent-based* tests: you describe the qualities a good response should have (relevance, professionalism, accuracy, …) and let **another LLM** act as the judge. The result is resilient, maintainable tests that focus on behaviour, not exact wording.
+**Jest LLM Eval** lets you write _intent-based_ tests: you describe the qualities a good response should have (relevance, professionalism, accuracy, …) and let **another LLM** act as the judge. The result is resilient, maintainable tests that focus on behaviour, not exact wording.
 
 ---
 
 ## <a id="features"></a>Features
 
-* 🤖 **AI-Powered Assertions** – Evaluate responses with an LLM judge.
-* 🎨 **Beautiful Terminal UI** – Colourful tables, progress bars & themes.
-* 📊 **Rich Reporting** – JSON & interactive HTML output for CI, dashboards, or manual inspection.
-* 🔧 **Jest Integration** – Custom matchers (`toPassAllCriteria`, `toPassWithConfidence`, `toHaveToolCall`, …).
-* 📈 **Confidence Testing** – Run the same test _n_ times and require a minimum pass-rate.
-* 🔄 **Multi-Step Conversations** – Assert complex dialogue flows.
-* 🛠️ **Tool-Call Testing** – Verify function / tool calls produced by agents.
-* 📝 **TypeScript First** – Full typings included.
-* 🖥️ **CLI Viewer** – Quickly explore results in your terminal.
+- 🤖 **AI-Powered Assertions** – Evaluate responses with an LLM judge.
+- 🎨 **Beautiful Terminal UI** – Colourful tables, progress bars & themes.
+- 📊 **Rich Reporting** – JSON & interactive HTML output for CI, dashboards, or manual inspection.
+- 🔧 **Jest Integration** – Custom matchers (`toPassAllCriteria`, `toPassWithConfidence`, `toHaveToolCall`, …).
+- 📈 **Confidence Testing** – Run the same test _n_ times and require a minimum pass-rate.
+- 🔄 **Multi-Step Conversations** – Assert complex dialogue flows.
+- 🛠️ **Tool-Call Testing** – Verify function / tool calls produced by agents.
+- 📝 **TypeScript First** – Full typings included.
+- 🖥️ **CLI Viewer** – Quickly explore results in your terminal.
 
 ---
 
@@ -74,7 +83,10 @@ import { openai } from '@ai-sdk/openai';
 const criteria = defineEvaluationCriteria()
   .add(CRITERIA.Relevance)
   .add(CRITERIA.Professionalism)
-  .add({ id: 'technical_detail', description: 'Mentions at least one concrete technical detail.' })
+  .add({
+    id: 'technical_detail',
+    description: 'Mentions at least one concrete technical detail.',
+  })
   .build();
 
 // 2️⃣ Choose an evaluation model (judge)
@@ -84,14 +96,17 @@ const judge = openai('gpt-4');
 it('assistant answers deployment question', async () => {
   const conversation = [
     { role: 'user', content: 'How do I deploy a React app?' },
-    { role: 'assistant', content: 'Use platforms such as Vercel, Netlify or AWS…' }
+    {
+      role: 'assistant',
+      content: 'Use platforms such as Vercel, Netlify or AWS…',
+    },
   ];
 
   await expect(conversation).toPassAllCriteria(criteria, judge);
 });
 ```
 
-Run `npx jest` – your assertion is evaluated by *another* LLM and the result is displayed in a colourful table.
+Run `npx jest` – your assertion is evaluated by _another_ LLM and the result is displayed in a colourful table.
 
 ---
 
@@ -129,12 +144,12 @@ npx jest-llm-eval view --report-path ./jest-evaluation-results/my-run.json
 
 Flags:
 
-| Flag                 | Description                                 | Default                         |
-| -------------------- | ------------------------------------------- | ------------------------------- |
-| `--theme`            | `default`, `minimal`, `vibrant`             | `default`                       |
-| `--filter`           | `all`, `passed`, `failed`                   | `all`                           |
-| `--report-path`      | Path to a JSON report                       | Latest run in default directory |
-| `--no-details`       | Hide criteria breakdown                     | —                               |
+| Flag            | Description                     | Default                         |
+| --------------- | ------------------------------- | ------------------------------- |
+| `--theme`       | `default`, `minimal`, `vibrant` | `default`                       |
+| `--filter`      | `all`, `passed`, `failed`       | `all`                           |
+| `--report-path` | Path to a JSON report           | Latest run in default directory |
+| `--no-details`  | Hide criteria breakdown         | —                               |
 
 ---
 
@@ -149,8 +164,11 @@ module.exports = {
   reporters: [
     'default',
     ['jest-llm-eval/terminal-reporter', { theme: 'vibrant', compact: false }],
-    ['jest-llm-eval/evaluation-reporter', { outputDir: './jest-evaluation-results' }]
-  ]
+    [
+      'jest-llm-eval/evaluation-reporter',
+      { outputDir: './jest-evaluation-results' },
+    ],
+  ],
 };
 ```
 
@@ -160,8 +178,8 @@ module.exports = {
 // tsconfig.json
 {
   "compilerOptions": {
-    "types": ["jest", "jest-llm-eval"]
-  }
+    "types": ["jest", "jest-llm-eval"],
+  },
 }
 ```
 
@@ -182,16 +200,15 @@ await expect(myFn).toPassWithConfidence({ iterations: 5, minSuccessRate: 0.8 });
 import { runMultiStepTest } from 'jest-llm-eval';
 
 const conversation = await runMultiStepTest(
-  [
-    'I need help with my order',
-    'Order #12345',
-    'I want to return it'
-  ],
+  ['I need help with my order', 'Order #12345', 'I want to return it'],
   {
-    createAgentPrompt: (messages) => ({
+    createAgentPrompt: messages => ({
       model: openai('gpt-4'),
-      messages: [{ role: 'system', content: 'You are a helpful agent' }, ...messages]
-    })
+      messages: [
+        { role: 'system', content: 'You are a helpful agent' },
+        ...messages,
+      ],
+    }),
   }
 );
 ```
@@ -199,7 +216,9 @@ const conversation = await runMultiStepTest(
 ### Tool / Function Call Assertions
 
 ```ts
-await expect(conversation).toHaveToolCall('search_database', { query: 'user preferences' });
+await expect(conversation).toHaveToolCall('search_database', {
+  query: 'user preferences',
+});
 ```
 
 ---
@@ -208,26 +227,37 @@ await expect(conversation).toHaveToolCall('search_database', { query: 'user pref
 
 ### Builders & Helpers
 
-| Function                               | Description                                      |
-| -------------------------------------- | ------------------------------------------------ |
-| `defineEvaluationCriteria()`           | Fluent builder for criteria arrays               |
-| `evaluateAiResponse(model, msgs, c)`   | Low-level helper for direct evaluation           |
-| `runMultiStepTest(prompts, options)`   | Utility for step-based conversation tests        |
+| Function                             | Description                               |
+| ------------------------------------ | ----------------------------------------- |
+| `defineEvaluationCriteria()`         | Fluent builder for criteria arrays        |
+| `evaluateAiResponse(model, msgs, c)` | Low-level helper for direct evaluation    |
+| `runMultiStepTest(prompts, options)` | Utility for step-based conversation tests |
 
 ### Predefined Criteria (`CRITERIA` enum)
 
-* `Welcome` – Greeting tone
-* `Relevance` – Addresses the user's question
-* `Conciseness` – Avoids unnecessary fluff
-* `Professionalism` – Maintains professional language
-* …and more
+- `Welcome` – Greeting tone
+- `Relevance` – Addresses the user's question
+- `Conciseness` – Avoids unnecessary fluff
+- `Professionalism` – Maintains professional language
+- …and more
 
 ### Result Types (simplified)
 
 ```ts
-interface EvaluationCriterionDef { id: string; description: string; }
-interface EvaluatedCriterionResult { id: string; passed: boolean; description: string; }
-interface TokenUsage { promptTokens?: number; completionTokens?: number; totalTokens: number; }
+interface EvaluationCriterionDef {
+  id: string;
+  description: string;
+}
+interface EvaluatedCriterionResult {
+  id: string;
+  passed: boolean;
+  description: string;
+}
+interface TokenUsage {
+  promptTokens?: number;
+  completionTokens?: number;
+  totalTokens: number;
+}
 ```
 
 ---
@@ -236,11 +266,11 @@ interface TokenUsage { promptTokens?: number; completionTokens?: number; totalTo
 
 See [`packages/llm-eval/examples/`](./examples) for fully-working demos:
 
-* `basic-evaluation.ts` – Smallest possible test.
-* `multi-step-conversation.ts` – End-to-end dialogue flow.
-* `tool-call-testing.ts` – Verify structured tool calls.
-* `confidence-testing.ts` – Consistency over multiple runs.
-* `terminal-reporting.ts` – Showcase terminal UI & CLI.
+- `basic-evaluation.ts` – Smallest possible test.
+- `multi-step-conversation.ts` – End-to-end dialogue flow.
+- `tool-call-testing.ts` – Verify structured tool calls.
+- `confidence-testing.ts` – Consistency over multiple runs.
+- `terminal-reporting.ts` – Showcase terminal UI & CLI.
 
 Run them with:
 
@@ -269,8 +299,8 @@ MIT © [Your Name](https://github.com/yourusername)
 
 ## <a id="support"></a>Support
 
-* **Issues** – <https://github.com/yourusername/jest-llm-eval/issues>
-* **Discussions** – <https://github.com/yourusername/jest-llm-eval/discussions>
-* **Email** – <mailto:support@example.com>
+- **Issues** – <https://github.com/yourusername/jest-llm-eval/issues>
+- **Discussions** – <https://github.com/yourusername/jest-llm-eval/discussions>
+- **Email** – <mailto:support@example.com>
 
 Made with ❤️ for the AI development community.
