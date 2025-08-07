@@ -1,7 +1,7 @@
 # Jest LLM Eval
 
 [![npm version](https://img.shields.io/npm/v/jest-llm-eval.svg?style=flat-square)](https://www.npmjs.com/package/jest-llm-eval)
-[![Build](https://img.shields.io/github/actions/workflow/status/yourusername/jest-llm-eval/ci.yml?branch=main&style=flat-square)](https://github.com/yourusername/jest-llm-eval/actions)
+[![Build](https://img.shields.io/github/actions/workflow/status/alexerm/jest-llm-eval/ci.yml?branch=main&style=flat-square)](https://github.com/alexerm/jest-llm-eval/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
 
 > **AI-powered evaluation framework for testing Large-Language-Model (LLM) responses with Jest.**
@@ -323,8 +323,8 @@ node examples/basic-evaluation.ts   # or ts-node
 ## <a id="contributing"></a>Contributing
 
 1. **Fork** the repo & create a branch.
-2. Run `pnpm install` (or your package manager).
-3. Execute `turbo dev --filter=@repo/llm-eval` to watch source ↔ tests.
+2. Run `npm install` (or your package manager).
+3. Execute `npm run dev -- --filter=llm-eval` to watch source ↔ tests.
 4. Follow the coding guidelines in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 All PRs must pass `eslint`, `prettier` and unit tests (`pnpm test`).
@@ -333,14 +333,14 @@ All PRs must pass `eslint`, `prettier` and unit tests (`pnpm test`).
 
 ## <a id="license"></a>License
 
-MIT © [Your Name](https://github.com/yourusername)
+MIT © [Oleksandr Erm](https://github.com/alexerm)
 
 ---
 
 ## <a id="support"></a>Support
 
-- **Issues** – <https://github.com/yourusername/jest-llm-eval/issues>
-- **Discussions** – <https://github.com/yourusername/jest-llm-eval/discussions>
+- **Issues** – <https://github.com/alexerm/jest-llm-eval/issues>
+- **Discussions** – <https://github.com/alexerm/jest-llm-eval/discussions>
 - **Email** – <mailto:support@example.com>
 
 Made with ❤️ for the AI development community.

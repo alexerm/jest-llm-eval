@@ -1,0 +1,33 @@
+name: Bug report
+description: Report a problem with jest-llm-eval
+labels: [bug]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: Minimal steps/code to reproduce the issue
+      render: bash
+  - type: input
+    id: version
+    attributes:
+      label: Package version
+      placeholder: e.g. 1.0.0
+  - type: input
+    id: node
+    attributes:
+      label: Node.js version
+      placeholder: e.g. 18.20.0
+  - type: input
+    id: os
+    attributes:
+      label: OS
+      placeholder: e.g. macOS 14.6
+

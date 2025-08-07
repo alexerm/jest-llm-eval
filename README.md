@@ -1,113 +1,79 @@
-# Jest-LLM-Eval Monorepo
+# Jest LLM Eval
 
 [![CI](https://img.shields.io/github/actions/workflow/status/alexerm/jest-llm-eval/ci.yml?branch=main&style=flat-square)](https://github.com/alexerm/jest-llm-eval/actions)
+[![npm](https://img.shields.io/npm/v/jest-llm-eval.svg?style=flat-square)](https://www.npmjs.com/package/jest-llm-eval)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
 
-> **AI-powered testing utilities for Large-Language-Model applications, packaged as a Turborepo workspace.**
+> AI-powered evaluation framework for testing Large-Language-Model (LLM) responses with Jest.
 
-This repository hosts **Jest LLM Eval**, a framework that lets you write intent-driven tests for LLM responses, plus a set of shared configs used across projects.
+### Why
 
----
+Traditional tests break on non-deterministic AI output. Jest LLM Eval gives you intent-based assertions judged by an LLM so you can test behaviour, not exact strings.
 
-## Packages
+### Features
 
-| Package                                                      | Version                                                                                      | Description                                                                                            |
-| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| [`packages/llm-eval`](./packages/llm-eval)                   | ![npm](https://img.shields.io/npm/v/jest-llm-eval.svg?label=jest-llm-eval&style=flat-square) | The core library: custom Jest matchers, CLI viewer, terminal/html reporters.                           |
-| [`packages/eslint-config`](./packages/eslint-config)         | –                                                                                            | Opinionated ESLint rules for TypeScript & React (re-exporting `eslint-config-next`, `prettier`, etc.). |
-| [`packages/typescript-config`](./packages/typescript-config) | –                                                                                            | Shared `tsconfig` presets for apps & packages.                                                         |
+- AI-powered assertions and confidence testing
+- Beautiful terminal UI and reporters (terminal/JSON/HTML)
+- Tool-call and multi-step conversation helpers
+- TypeScript-first with full typings
 
-> **Note:** `apps/` is intentionally empty – this repo focuses on _libraries_, but it can be extended with demo apps if needed.
-
----
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js **18+**
-- npm, pnpm or yarn (examples use **npm**)
-
-### Install dependencies
+### Install
 
 ```bash
-npm install
+npm install -D jest-llm-eval
 ```
 
-### Build all packages
+Requires Node 16+ and Jest 29+.
+
+### Quick Start
+
+```ts
+import { defineEvaluationCriteria, CRITERIA, type JudgeAdapter } from 'jest-llm-eval';
+
+const criteria = defineEvaluationCriteria()
+  .add(CRITERIA.Relevance)
+  .add(CRITERIA.Professionalism)
+  .build();
+
+const judge: JudgeAdapter = { /* call your preferred LLM and return { object, usage } */ };
+
+it('answers deployment question', async () => {
+  const convo = [
+    { role: 'user', content: 'How do I deploy a React app?' },
+    { role: 'assistant', content: 'Use platforms such as Vercel, Netlify or AWS…' },
+  ];
+  await expect(convo).toPassAllCriteria(criteria, judge);
+});
+```
+
+### CLI Viewer
 
 ```bash
-# Uses Turborepo to cache & parallelise
-npm run build
+npx jest-llm-eval view --theme vibrant --filter failed
 ```
 
-### Run tests
+### Jest Setup
 
-```bash
-npm run test
+```js
+// jest.config.js
+module.exports = {
+  setupFilesAfterEnv: ['jest-llm-eval/setup'],
+  reporters: [
+    'default',
+    ['jest-llm-eval/terminal-reporter', { theme: 'vibrant', compact: false }],
+    ['jest-llm-eval/evaluation-reporter', { outputDir: './jest-evaluation-results' }],
+  ],
+};
 ```
 
-### Develop locally
+### Examples
 
-```bash
-# Watch src changes & re-run test commands for all packages
-npm run dev
+See `packages/llm-eval/examples/` for runnable demos: basic evaluation, multi-step conversation, tool-call testing, and terminal reporting.
 
-# Or focus on a single package
-npm run dev -- --filter=llm-eval
-```
+### Contributing
 
----
+PRs welcome. Please see `packages/llm-eval/CONTRIBUTING.md`.
 
-## Publishing a new version
-
-1. Bump the version in `packages/llm-eval/package.json` (follow semver).
-2. Run the release script:
-
-   ```bash
-   npm run build --workspace=packages/llm-eval
-   cd packages/llm-eval && npm publish
-   ```
-
-3. Tag & push:
-
-   ```bash
-   git tag vX.Y.Z && git push --tags
-   ```
-
----
-
-## Folder Structure (simplified)
-
-```
-.
-├── apps/                  # Empty – slot for example apps
-├── packages/
-│   ├── llm-eval/          # Core library (TypeScript)
-│   ├── eslint-config/     # Shared ESLint presets
-│   └── typescript-config/ # Shared tsconfig presets
-├── jest-evaluation-results/ # Generated test reports (git-ignored)
-├── turbo.json             # Turborepo config
-└── README.md              # You're here 😊
-```
-
----
-
-## Contributing
-
-We love contributions! Please read [`packages/llm-eval/CONTRIBUTING.md`](./packages/llm-eval/CONTRIBUTING.md) for guidelines.
-
-To start hacking on the core package:
-
-```bash
-# From repo root
-npm run dev -- --filter=llm-eval
-```
-
-The command runs `jest --watch` and recompiles TypeScript on change.
-
----
-
-## License
+### License
 
 MIT © [Oleksandr Erm](https://github.com/alexerm)
