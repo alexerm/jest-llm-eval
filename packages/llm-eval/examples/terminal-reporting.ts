@@ -24,7 +24,7 @@ import { openai } from '@ai-sdk/openai';
  */
 
 describe('Terminal Reporting Demo', () => {
-  const evaluationModel = openai('gpt-4');
+  const evaluationModel = openai('gpt-5');
 
   const baseCriteria = defineEvaluationCriteria()
     .add(CRITERIA.Professionalism)

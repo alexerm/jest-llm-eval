@@ -76,30 +76,35 @@ npm install -D jest-llm-eval
 ## <a id="quick-start"></a>Quick Start
 
 ```ts
-import { defineEvaluationCriteria, CRITERIA } from 'jest-llm-eval';
-import { openai } from '@ai-sdk/openai';
+import {
+  defineEvaluationCriteria,
+  CRITERIA,
+  type GenericMessage,
+  type JudgeAdapter,
+} from 'jest-llm-eval';
 
 // 1️⃣ Build criteria
 const criteria = defineEvaluationCriteria()
   .add(CRITERIA.Relevance)
   .add(CRITERIA.Professionalism)
-  .add({
-    id: 'technical_detail',
-    description: 'Mentions at least one concrete technical detail.',
-  })
+  .add({ id: 'technical_detail', description: 'Mentions at least one concrete technical detail.' })
   .build();
 
-// 2️⃣ Choose an evaluation model (judge)
-const judge = openai('gpt-4');
+// 2️⃣ Provide a judge (adapter over your preferred LLM)
+const judge: JudgeAdapter = {
+  async evaluateObject({ jsonSchema, messages, systemPrompt }) {
+    // Call any LLM here and return a JSON object matching jsonSchema
+    // Minimal pseudo-call; replace with your provider
+    const { object, usage } = await someLLM.generateObject({ schema: jsonSchema, messages, system: systemPrompt });
+    return { object, usage };
+  },
+};
 
 // 3️⃣ Write your test as usual
 it('assistant answers deployment question', async () => {
-  const conversation = [
+  const conversation: GenericMessage[] = [
     { role: 'user', content: 'How do I deploy a React app?' },
-    {
-      role: 'assistant',
-      content: 'Use platforms such as Vercel, Netlify or AWS…',
-    },
+    { role: 'assistant', content: 'Use platforms such as Vercel, Netlify or AWS…' },
   ];
 
   await expect(conversation).toPassAllCriteria(criteria, judge);
@@ -203,11 +208,9 @@ const conversation = await runMultiStepTest(
   ['I need help with my order', 'Order #12345', 'I want to return it'],
   {
     createAgentPrompt: messages => ({
-      model: openai('gpt-4'),
-      messages: [
-        { role: 'system', content: 'You are a helpful agent' },
-        ...messages,
-      ],
+      // you can still use any SDK to create assistant messages
+      model: openai('gpt-5'),
+      messages: [{ role: 'system', content: 'You are a helpful agent' }, ...messages],
     }),
   }
 );
@@ -230,7 +233,7 @@ await expect(conversation).toHaveToolCall('search_database', {
 | Function                             | Description                               |
 | ------------------------------------ | ----------------------------------------- |
 | `defineEvaluationCriteria()`         | Fluent builder for criteria arrays        |
-| `evaluateAiResponse(model, msgs, c)` | Low-level helper for direct evaluation    |
+| `evaluateAiResponse(judge, msgs, c)` | Low-level helper for direct evaluation    |
 | `runMultiStepTest(prompts, options)` | Utility for step-based conversation tests |
 
 ### Predefined Criteria (`CRITERIA` enum)
@@ -241,7 +244,7 @@ await expect(conversation).toHaveToolCall('search_database', {
 - `Professionalism` – Maintains professional language
 - …and more
 
-### Result Types (simplified)
+### Result & Types (simplified)
 
 ```ts
 interface EvaluationCriterionDef {
@@ -258,6 +261,43 @@ interface TokenUsage {
   completionTokens?: number;
   totalTokens: number;
 }
+
+// Generic message shape the framework uses
+type GenericMessage = {
+  role: 'system' | 'user' | 'assistant' | 'tool';
+  content: string | Array<{ type: 'text'; text: string } | { type: 'tool-call'; toolName: string; input: Record<string, unknown> }>;
+};
+
+// Adapter you implement to call your preferred LLM
+interface JudgeAdapter {
+  evaluateObject(args: {
+    jsonSchema: object;
+    messages: GenericMessage[];
+    systemPrompt?: string;
+  }): Promise<{ object: unknown; usage?: TokenUsage }>;
+}
+```
+
+---
+
+## Using the AI SDK (optional adapter)
+
+```ts
+import { openai } from '@ai-sdk/openai';
+import { generateObject, type ModelMessage } from 'ai';
+import { type JudgeAdapter } from 'jest-llm-eval';
+
+export const aiSdkJudge: JudgeAdapter = {
+  async evaluateObject({ jsonSchema, messages, systemPrompt }) {
+    const res = await generateObject({
+      model: openai('gpt-5'),
+      schema: jsonSchema,
+      messages: messages as unknown as ModelMessage[],
+      system: systemPrompt,
+    });
+    return { object: res.object, usage: res.usage };
+  },
+};
 ```
 
 ---

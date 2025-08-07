@@ -11,8 +11,8 @@ import { z } from 'zod';
  */
 
 describe('Tool Call Testing', () => {
-  const evaluationModel = openai('gpt-4');
-  const aiModel = openai('gpt-3.5-turbo');
+  const evaluationModel = openai('gpt-5');
+  const aiModel = openai('gpt-5');
 
   // Define some example tools
   const tools = {

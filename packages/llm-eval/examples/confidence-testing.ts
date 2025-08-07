@@ -11,8 +11,8 @@ import { generateText } from 'ai';
  */
 
 describe('Confidence Testing', () => {
-  const evaluationModel = openai('gpt-4');
-  const aiModel = openai('gpt-3.5-turbo');
+  const evaluationModel = openai('gpt-5');
+  const aiModel = openai('gpt-5');
 
   const criteria = defineEvaluationCriteria()
     .add(CRITERIA.Professionalism)

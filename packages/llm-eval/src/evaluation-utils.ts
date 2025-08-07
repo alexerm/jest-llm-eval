@@ -1,5 +1,6 @@
-import { type LanguageModel, generateObject, type ModelMessage, jsonSchema } from 'ai';
+import { jsonSchema } from 'ai';
 import { z } from 'zod';
+import type { GenericMessage, JudgeAdapter, TokenUsage } from './types';
 
 // Defines the structure for an evaluation criterion input
 export type EvaluationCriterionDef = {
@@ -15,11 +16,7 @@ export type EvaluatedCriterionResult = {
 };
 
 // Type for token usage, mirroring the Vercel AI SDK structure
-export type TokenUsage = {
-  promptTokens?: number; // Made optional to align with LanguageModelV2Usage
-  completionTokens?: number; // Made optional to align with LanguageModelV2Usage
-  totalTokens: number;
-};
+export type { TokenUsage };
 
 // Type for the combined result of evaluation and token usage
 export type EvaluationResultWithUsage = {
@@ -103,16 +100,15 @@ export function defineEvaluationCriteria() {
  * @returns A promise that resolves to an array of evaluated criteria, each indicating if it passed.
  */
 export async function evaluateAiResponse(
-  evaluationModel: LanguageModel,
-  messages: ModelMessage[],
+  judge: JudgeAdapter,
+  messages: GenericMessage[],
   evaluationCriteria: ReadonlyArray<EvaluationCriterionDef>
 ): Promise<EvaluationResultWithUsage> {
   // MODIFIED return type
 
   // Capture the full result from generateObject
-  const generateObjectResult = await generateObject({
-    model: evaluationModel,
-    schema: jsonSchema({
+  const result = await judge.evaluateObject({
+    jsonSchema: {
       type: 'object',
       additionalProperties: false,
       required: ['criteria'],
@@ -131,9 +127,9 @@ export async function evaluateAiResponse(
           },
         },
       },
-    }),
+    },
     messages,
-    system: `
+    systemPrompt: `
       You evaluate the response of AI assistant. You should look at whole conversation and evaluate 
       it against the following criteria:
       ${evaluationCriteria.map(c => `- ${c.description} (ID: ${c.id})`).join('\n')}
@@ -142,10 +138,7 @@ export async function evaluateAiResponse(
 
   // Return both the criteria results and the token usage
   return {
-    results: (generateObjectResult.object as any).criteria as EvaluatedCriterionResult[],
-    // The Vercel AI SDK's generateObject returns a 'usage' object with
-    // { promptTokens: number; completionTokens: number; totalTokens: number; }
-    // This casting assumes generateObjectResult.usage conforms to TokenUsage.
-    usage: generateObjectResult.usage as TokenUsage,
+    results: (result.object as any).criteria as EvaluatedCriterionResult[],
+    usage: (result.usage || { totalTokens: 0 }) as TokenUsage,
   };
 }

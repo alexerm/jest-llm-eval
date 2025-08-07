@@ -9,8 +9,8 @@ import { openai } from '@ai-sdk/openai';
  */
 
 describe('Basic LLM Evaluation', () => {
-  // Setup evaluation model
-  const evaluationModel = openai('gpt-4');
+  // Setup evaluation model (default: gpt-5)
+  const evaluationModel = openai('gpt-5');
 
   // Define evaluation criteria
   const criteria = defineEvaluationCriteria()

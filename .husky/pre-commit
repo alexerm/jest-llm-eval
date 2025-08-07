@@ -1,0 +1,10 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+# Run repo checks before commit
+npm run lint || exit 1
+npm run check-types || exit 1
+npm run build || exit 1
+npm run test || exit 1
+
+

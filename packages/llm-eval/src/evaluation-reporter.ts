@@ -259,12 +259,12 @@ class EvaluationReporter implements Reporter {
     fs.writeFileSync(detailHtmlPath, detailHtmlContent);
   }
 
-  private formatMessageHtml(message: CoreMessage): string {
+  private formatMessageHtml(message: any): string {
     let contentHtml = '';
     if (typeof message.content === 'string') {
       contentHtml = this.formatStringContent(message.content);
     } else if (Array.isArray(message.content)) {
-      contentHtml = message.content.map(part => this.formatPart(part)).join('');
+      contentHtml = (message.content as unknown[]).map((part: unknown) => this.formatPart(part)).join('');
     }
 
     return `
@@ -287,20 +287,21 @@ class EvaluationReporter implements Reporter {
     }
   }
 
-  private formatPart(part: CoreMessage['content'][number]): string {
+  private formatPart(part: unknown): string {
     if (typeof part === 'string') {
       return `<pre>${this.escapeHtml(part)}</pre>`;
     }
-    if (part.type === 'text') {
-      return `<pre>${this.escapeHtml(part.text)}</pre>`;
-    } else if (part.type === 'tool-call') {
+    const p: any = part as any;
+    if (p && p.type === 'text') {
+      return `<pre>${this.escapeHtml(p.text)}</pre>`;
+    } else if (p && p.type === 'tool-call') {
       return `<strong>Tool Call: ${this.escapeHtml(
-        (part as any).toolName
+        p.toolName
       )}</strong><pre>${this.escapeHtml(
-        JSON.stringify((part as any).input, null, 2)
+        JSON.stringify(p.input, null, 2)
       )}</pre>`;
     }
-    return `<pre>${this.escapeHtml(JSON.stringify(part, null, 2))}</pre>`;
+    return `<pre>${this.escapeHtml(JSON.stringify(p, null, 2))}</pre>`;
   }
 
   private escapeHtml(unsafe: string): string {

@@ -1,11 +1,11 @@
 // @jest-environment jsdom
-import { type ModelMessage, type LanguageModel, generateText } from 'ai';
+import { generateText, generateObject, type LanguageModel, type CoreMessage, type Schema } from 'ai';
+import type { GenericMessage, JudgeAdapter, TokenUsage } from './types';
 import {
   type EvaluationCriterionDef,
   evaluateAiResponse,
   type EvaluatedCriterionResult,
   type EvaluationResultWithUsage,
-  type TokenUsage,
 } from './evaluation-utils';
 import util from 'util';
 import { z, ZodTypeAny } from 'zod';
@@ -19,9 +19,9 @@ import { z, ZodTypeAny } from 'zod';
  * @returns A combined array of ModelMessage objects representing the full conversation.
  */
 export function combineConversation(
-  initialMessages: ModelMessage[],
-  responseMessages: ModelMessage[]
-): ModelMessage[] {
+  initialMessages: GenericMessage[],
+  responseMessages: GenericMessage[]
+): GenericMessage[] {
   return [...initialMessages, ...responseMessages];
 }
 
@@ -36,7 +36,7 @@ export interface EvaluationRecord {
   timestamp: string; // ISO string of when the evaluation occurred
   durationMs: number; // How long the evaluation took in milliseconds
   modelId: string; // Identifier for the language model used
-  conversation: ModelMessage[];
+  conversation: GenericMessage[];
   criteria: ReadonlyArray<EvaluationCriterionDef>;
   results: EvaluatedCriterionResult[];
   usage: TokenUsage;
@@ -50,11 +50,16 @@ export interface EvaluationRecord {
 /**
  * Custom matcher: expect(conversation).toPassAllCriteria(evaluationCriteria, evaluationModel)
  */
+function isJudgeAdapter(value: unknown): value is JudgeAdapter {
+  if (typeof value !== 'object' || value === null) return false;
+  return typeof (value as { evaluateObject?: unknown }).evaluateObject === 'function';
+}
+
 async function toPassAllCriteria(
   this: jest.MatcherContext,
-  receivedConversation: ModelMessage[],
+  receivedConversation: GenericMessage[],
   criteria: ReadonlyArray<EvaluationCriterionDef>,
-  model: LanguageModel
+  judge: JudgeAdapter | LanguageModel
 ): Promise<jest.CustomMatcherResult> {
   const startTime = Date.now();
 
@@ -71,16 +76,38 @@ async function toPassAllCriteria(
       pass: false,
     };
   }
-  if (!model) {
+  if (!judge) {
     return {
-      message: () =>
-        'Expected an evaluation model (LanguageModel) to be provided.',
+      message: () => 'Expected a judge adapter to be provided.',
       pass: false,
     };
   }
+  const judgeToUse: JudgeAdapter = isJudgeAdapter(judge)
+    ? judge
+    : {
+        evaluateObject: async (args: {
+          jsonSchema: object;
+          messages: GenericMessage[];
+          systemPrompt?: string;
+        }): Promise<{ object: unknown; usage?: TokenUsage }> => {
+          // Adapt our fixed JSON schema to a Zod schema for generateObject
+          const zodCriteria = z
+            .object({ id: z.string(), description: z.string(), passed: z.boolean() })
+            .strict();
+          const zodSchema = z.object({ criteria: z.array(zodCriteria) }).strict();
+
+          const result = await generateObject({
+            model: judge as LanguageModel,
+            schema: zodSchema as unknown as Schema,
+            messages: args.messages as unknown as CoreMessage[],
+            system: args.systemPrompt,
+          });
+          return { object: result.object, usage: result.usage as TokenUsage };
+        },
+      };
 
   const evaluationData = await evaluateAiResponse(
-    model,
+    judgeToUse,
     receivedConversation,
     criteria
   );
@@ -91,15 +118,8 @@ async function toPassAllCriteria(
     Array.isArray(evaluationData.results) &&
     evaluationData.results.every(c => c.passed);
 
-  // Attempt to get a model identifier
-  let modelId = 'Unknown Model';
-  if (typeof (model as any).modelId === 'string') {
-    modelId = (model as any).modelId;
-  } else if (typeof (model as any).id === 'string') {
-    modelId = (model as any).id;
-  } else if (model.constructor && model.constructor.name !== 'Object') {
-    modelId = model.constructor.name;
-  }
+  // Model id is not available when using generic judge; set placeholder
+  const modelId = 'judge';
 
   const testPath = this.testPath || 'unknown_path';
   const testName = this.currentTestName || 'unknown_test_name';
@@ -189,7 +209,7 @@ async function toPassWithConfidence(
  */
 async function toHaveToolCallResult(
   this: jest.MatcherContext,
-  received: ModelMessage[],
+  received: GenericMessage[],
   toolName: string
 ): Promise<jest.CustomMatcherResult> {
   const calls = received.filter(msg => msg.role === 'tool');
@@ -211,7 +231,7 @@ async function toHaveToolCallResult(
 /**
  * Pretty-print a conversation array in the terminal with full depth and colors.
  */
-export function printConversation(conversation: ModelMessage[]) {
+export function printConversation(conversation: GenericMessage[]) {
   console.log(util.inspect(conversation, { depth: null, colors: true }));
 }
 
@@ -219,16 +239,16 @@ export function printConversation(conversation: ModelMessage[]) {
 export async function runMultiStepTest(
   userMessages: string[],
   options: {
-    createAgentPrompt: (messages: ModelMessage[]) => z.infer<ZodTypeAny>;
-    onStep?: (conversation: ModelMessage[], stepIndex: number) => void;
+    createAgentPrompt: (messages: GenericMessage[]) => z.infer<ZodTypeAny>;
+    onStep?: (conversation: GenericMessage[], stepIndex: number) => void;
   }
-): Promise<ModelMessage[]> {
-  const history: ModelMessage[] = [];
-  let modelHistory: ModelMessage[] = [];
+): Promise<GenericMessage[]> {
+  const history: GenericMessage[] = [];
+  let modelHistory: GenericMessage[] = [];
 
   for (let i = 0; i < userMessages.length; i++) {
     // Create and record UI user message
-    const userMsg: ModelMessage = {
+    const userMsg: GenericMessage = {
       role: 'user',
       content: userMessages[i],
     };
@@ -240,7 +260,7 @@ export async function runMultiStepTest(
     // Generate agent response
     const agentConfig = options.createAgentPrompt(history);
     const result = await generateText(agentConfig);
-    const assistantMsgs = result.response.messages as ModelMessage[];
+    const assistantMsgs = result.response.messages as unknown as GenericMessage[];
 
     // Append assistant messages
     modelHistory = [...modelHistory, ...assistantMsgs];
@@ -281,7 +301,7 @@ function deepPartialMatch(
  */
 async function toHaveToolCall(
   this: jest.MatcherContext,
-  received: ModelMessage[],
+  received: GenericMessage[],
   toolName: string,
   expectedArgs?: Record<string, z.infer<ZodTypeAny>>
 ): Promise<jest.CustomMatcherResult> {
@@ -291,20 +311,14 @@ async function toHaveToolCall(
   let actualArgs: any = undefined;
   for (const msg of assistantMsgs) {
     if (Array.isArray(msg.content)) {
-      for (const entry of msg.content) {
-        if (
-          entry &&
-          entry.type === 'tool-call' &&
-          entry.toolName === toolName
-        ) {
+      for (const entry of msg.content as unknown[]) {
+        const e: any = entry as any;
+        if (e && e.type === 'tool-call' && e.toolName === toolName) {
           found = true;
-          actualArgs = (entry as any).input;
+          actualArgs = e.input;
           if (
             !expectedArgs ||
-            deepPartialMatch(
-              (entry as any).input as Record<string, z.infer<ZodTypeAny>>,
-              expectedArgs
-            )
+            deepPartialMatch(e.input as Record<string, z.infer<ZodTypeAny>>, expectedArgs)
           ) {
             foundWithArgs = true;
             break;
@@ -330,7 +344,7 @@ declare module 'expect' {
   interface Matchers<R> {
     toPassAllCriteria(
       criteria: ReadonlyArray<EvaluationCriterionDef>,
-      model: LanguageModel
+      judge: JudgeAdapter
     ): R;
     toPassWithConfidence(options?: {
       iterations?: number;

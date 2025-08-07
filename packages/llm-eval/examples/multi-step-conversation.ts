@@ -10,8 +10,8 @@ import { generateText } from 'ai';
  */
 
 describe('Multi-Step Conversation Testing', () => {
-  const evaluationModel = openai('gpt-4');
-  const aiModel = openai('gpt-3.5-turbo');
+  const evaluationModel = openai('gpt-5');
+  const aiModel = openai('gpt-5');
 
   test('customer service conversation maintains context', async () => {
     const conversation = await runMultiStepTest(

@@ -1,4 +1,4 @@
-import type { LanguageModel } from 'ai';
+import type { JudgeAdapter } from './types';
 import type { ZodTypeAny } from 'zod';
 import type { EvaluationCriterionDef } from './evaluation-utils';
 
@@ -6,7 +6,7 @@ declare module 'expect' {
   interface Matchers<R> {
     toPassAllCriteria(
       criteria: ReadonlyArray<EvaluationCriterionDef>,
-      model: LanguageModel
+      judge: JudgeAdapter
     ): R;
     toPassWithConfidence(options?: {
       iterations?: number;
@@ -25,7 +25,7 @@ declare global {
     interface Matchers<R> {
       toPassAllCriteria(
         criteria: ReadonlyArray<EvaluationCriterionDef>,
-        model: LanguageModel
+        judge: JudgeAdapter
       ): R;
       toPassWithConfidence(options?: {
         iterations?: number;

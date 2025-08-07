@@ -3,7 +3,7 @@ import { defineEvaluationCriteria, CRITERIA } from './evaluation-utils';
 import './test-utils';
 import { openai } from '@ai-sdk/openai';
 
-const model = openai('gpt-4-turbo-preview');
+const model = openai('gpt-5');
 
 const describeIf = (cond: boolean) => (cond ? describe : describe.skip);
 const hasApiKey = !!process.env.OPENAI_API_KEY;
