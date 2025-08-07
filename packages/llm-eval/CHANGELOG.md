@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.0
+
+### Minor Changes
+
+- [`24f60fe`](https://github.com/alexerm/jest-llm-eval/commit/24f60fe4c69e9b22eee5da24d350fbaff2d6a062) Thanks [@alexerm](https://github.com/alexerm)! - Initial OSS setup: CI, release automation, issue/PR templates, README refresh, and coverage thresholds.
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
