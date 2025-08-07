@@ -1,11 +1,5 @@
 // @jest-environment jsdom
-import {
-  type CoreMessage,
-  type LanguageModel,
-  type Message,
-  generateText,
-  convertToCoreMessages,
-} from 'ai';
+import { type ModelMessage, type LanguageModel, generateText } from 'ai';
 import {
   type EvaluationCriterionDef,
   evaluateAiResponse,
@@ -25,10 +19,10 @@ import { z, ZodTypeAny } from 'zod';
  * @returns A combined array of ModelMessage objects representing the full conversation.
  */
 export function combineConversation(
-  initialMessages: Message[] | CoreMessage[],
-  responseMessages: CoreMessage[]
-): CoreMessage[] {
-  return [...(initialMessages as CoreMessage[]), ...responseMessages];
+  initialMessages: ModelMessage[],
+  responseMessages: ModelMessage[]
+): ModelMessage[] {
+  return [...initialMessages, ...responseMessages];
 }
 
 // This type is essentially EvaluatedCriterionResult[], kept for potential distinct usage or can be removed.
@@ -42,7 +36,7 @@ export interface EvaluationRecord {
   timestamp: string; // ISO string of when the evaluation occurred
   durationMs: number; // How long the evaluation took in milliseconds
   modelId: string; // Identifier for the language model used
-  conversation: CoreMessage[];
+  conversation: ModelMessage[];
   criteria: ReadonlyArray<EvaluationCriterionDef>;
   results: EvaluatedCriterionResult[];
   usage: TokenUsage;
@@ -58,7 +52,7 @@ export interface EvaluationRecord {
  */
 async function toPassAllCriteria(
   this: jest.MatcherContext,
-  receivedConversation: CoreMessage[],
+  receivedConversation: ModelMessage[],
   criteria: ReadonlyArray<EvaluationCriterionDef>,
   model: LanguageModel
 ): Promise<jest.CustomMatcherResult> {
@@ -195,7 +189,7 @@ async function toPassWithConfidence(
  */
 async function toHaveToolCallResult(
   this: jest.MatcherContext,
-  received: CoreMessage[],
+  received: ModelMessage[],
   toolName: string
 ): Promise<jest.CustomMatcherResult> {
   const calls = received.filter(msg => msg.role === 'tool');
@@ -217,7 +211,7 @@ async function toHaveToolCallResult(
 /**
  * Pretty-print a conversation array in the terminal with full depth and colors.
  */
-export function printConversation(conversation: CoreMessage[]) {
+export function printConversation(conversation: ModelMessage[]) {
   console.log(util.inspect(conversation, { depth: null, colors: true }));
 }
 
@@ -225,29 +219,28 @@ export function printConversation(conversation: CoreMessage[]) {
 export async function runMultiStepTest(
   userMessages: string[],
   options: {
-    createAgentPrompt: (messages: Message[]) => z.infer<ZodTypeAny>;
-    onStep?: (conversation: CoreMessage[], stepIndex: number) => void;
+    createAgentPrompt: (messages: ModelMessage[]) => z.infer<ZodTypeAny>;
+    onStep?: (conversation: ModelMessage[], stepIndex: number) => void;
   }
-): Promise<CoreMessage[]> {
-  const uiHistory: Message[] = [];
-  let modelHistory: CoreMessage[] = [];
+): Promise<ModelMessage[]> {
+  const history: ModelMessage[] = [];
+  let modelHistory: ModelMessage[] = [];
 
   for (let i = 0; i < userMessages.length; i++) {
     // Create and record UI user message
-    const userMsg: Message = {
-      id: `u${i}`,
+    const userMsg: ModelMessage = {
       role: 'user',
       content: userMessages[i],
     };
-    uiHistory.push(userMsg);
+    history.push(userMsg);
 
     // Append user message to model history
-    modelHistory = [...modelHistory, ...convertToCoreMessages([userMsg])];
+    modelHistory = [...modelHistory, userMsg];
 
     // Generate agent response
-    const agentConfig = options.createAgentPrompt(uiHistory);
+    const agentConfig = options.createAgentPrompt(history);
     const result = await generateText(agentConfig);
-    const assistantMsgs = result.response.messages;
+    const assistantMsgs = result.response.messages as ModelMessage[];
 
     // Append assistant messages
     modelHistory = [...modelHistory, ...assistantMsgs];
@@ -288,7 +281,7 @@ function deepPartialMatch(
  */
 async function toHaveToolCall(
   this: jest.MatcherContext,
-  received: CoreMessage[],
+  received: ModelMessage[],
   toolName: string,
   expectedArgs?: Record<string, z.infer<ZodTypeAny>>
 ): Promise<jest.CustomMatcherResult> {
@@ -305,11 +298,11 @@ async function toHaveToolCall(
           entry.toolName === toolName
         ) {
           found = true;
-          actualArgs = entry.args;
+          actualArgs = (entry as any).input;
           if (
             !expectedArgs ||
             deepPartialMatch(
-              entry.args as Record<string, z.infer<ZodTypeAny>>,
+              (entry as any).input as Record<string, z.infer<ZodTypeAny>>,
               expectedArgs
             )
           ) {

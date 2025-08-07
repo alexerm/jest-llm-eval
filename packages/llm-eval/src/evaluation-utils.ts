@@ -1,4 +1,4 @@
-import { type LanguageModel, generateObject, type CoreMessage } from 'ai';
+import { type LanguageModel, generateObject, type ModelMessage, jsonSchema } from 'ai';
 import { z } from 'zod';
 
 // Defines the structure for an evaluation criterion input
@@ -104,7 +104,7 @@ export function defineEvaluationCriteria() {
  */
 export async function evaluateAiResponse(
   evaluationModel: LanguageModel,
-  messages: CoreMessage[],
+  messages: ModelMessage[],
   evaluationCriteria: ReadonlyArray<EvaluationCriterionDef>
 ): Promise<EvaluationResultWithUsage> {
   // MODIFIED return type
@@ -112,20 +112,25 @@ export async function evaluateAiResponse(
   // Capture the full result from generateObject
   const generateObjectResult = await generateObject({
     model: evaluationModel,
-    schema: z.object({
-      criteria: z
-        .array(
-          z.object({
-            id: z.string().describe('Unique identifier for the criteria'), // Changed back to z.string()
-            description: z
-              .string()
-              .describe('Description of what is being evaluated'),
-            passed: z
-              .boolean()
-              .describe('Whether the criteria was met (Yes/No)'),
-          })
-        )
-        .describe('List of evaluation criteria with their outcomes'),
+    schema: jsonSchema({
+      type: 'object',
+      additionalProperties: false,
+      required: ['criteria'],
+      properties: {
+        criteria: {
+          type: 'array',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['id', 'description', 'passed'],
+            properties: {
+              id: { type: 'string' },
+              description: { type: 'string' },
+              passed: { type: 'boolean' },
+            },
+          },
+        },
+      },
     }),
     messages,
     system: `
@@ -137,7 +142,7 @@ export async function evaluateAiResponse(
 
   // Return both the criteria results and the token usage
   return {
-    results: generateObjectResult.object.criteria as EvaluatedCriterionResult[],
+    results: (generateObjectResult.object as any).criteria as EvaluatedCriterionResult[],
     // The Vercel AI SDK's generateObject returns a 'usage' object with
     // { promptTokens: number; completionTokens: number; totalTokens: number; }
     // This casting assumes generateObjectResult.usage conforms to TokenUsage.

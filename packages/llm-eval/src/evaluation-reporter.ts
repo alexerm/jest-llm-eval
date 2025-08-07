@@ -295,9 +295,9 @@ class EvaluationReporter implements Reporter {
       return `<pre>${this.escapeHtml(part.text)}</pre>`;
     } else if (part.type === 'tool-call') {
       return `<strong>Tool Call: ${this.escapeHtml(
-        part.toolName
+        (part as any).toolName
       )}</strong><pre>${this.escapeHtml(
-        JSON.stringify(part.args, null, 2)
+        JSON.stringify((part as any).input, null, 2)
       )}</pre>`;
     }
     return `<pre>${this.escapeHtml(JSON.stringify(part, null, 2))}</pre>`;
