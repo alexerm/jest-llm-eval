@@ -1,4 +1,4 @@
-import { jsonSchema } from 'ai';
+// No need to import jsonSchema helper here; we pass Zod schema directly and a plain JSON Schema for compatibility
 import { z } from 'zod';
 import type { GenericMessage, JudgeAdapter, TokenUsage } from './types';
 
@@ -108,6 +108,16 @@ export async function evaluateAiResponse(
 
   // Capture the full result from generateObject
   const result = await judge.evaluateObject({
+    zodSchema: z.object({
+      criteria: z.array(
+        z.object({
+          id: z.string(),
+          description: z.string(),
+          passed: z.boolean(),
+        })
+      ),
+    }),
+    // Provide a plain JSON Schema for adapters that require it
     jsonSchema: {
       type: 'object',
       additionalProperties: false,
@@ -129,16 +139,18 @@ export async function evaluateAiResponse(
       },
     },
     messages,
-    systemPrompt: `
-      You evaluate the response of AI assistant. You should look at whole conversation and evaluate 
-      it against the following criteria:
-      ${evaluationCriteria.map(c => `- ${c.description} (ID: ${c.id})`).join('\n')}
-    `,
+    systemPrompt: [
+      'You are an impartial judge evaluating an assistant response.',
+      'Consider the entire conversation and assess it against the following criteria:',
+      ...evaluationCriteria.map(c => `- ${c.description} (ID: ${c.id})`),
+      'Return only JSON matching the provided schema.',
+    ].join('\n'),
   });
 
   // Return both the criteria results and the token usage
+  const typed = result.object as { criteria: EvaluatedCriterionResult[] };
   return {
-    results: (result.object as any).criteria as EvaluatedCriterionResult[],
+    results: typed.criteria,
     usage: (result.usage || { totalTokens: 0 }) as TokenUsage,
   };
 }

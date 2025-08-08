@@ -264,7 +264,9 @@ class EvaluationReporter implements Reporter {
     if (typeof message.content === 'string') {
       contentHtml = this.formatStringContent(message.content);
     } else if (Array.isArray(message.content)) {
-      contentHtml = (message.content as unknown[]).map((part: unknown) => this.formatPart(part)).join('');
+      contentHtml = (message.content as unknown[])
+        .map((part: unknown) => this.formatPart(part))
+        .join('');
     }
 
     return `

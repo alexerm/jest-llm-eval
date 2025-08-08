@@ -31,12 +31,14 @@ export type TokenUsage = {
   totalTokens: number;
 };
 
+import type { ZodTypeAny } from 'zod';
+
 export interface JudgeAdapter {
   evaluateObject(args: {
-    jsonSchema: object;
+    // Prefer Zod; JSON Schema is optional for SDKs that require it
+    zodSchema?: ZodTypeAny;
+    jsonSchema?: object;
     messages: GenericMessage[];
     systemPrompt?: string;
   }): Promise<{ object: unknown; usage?: TokenUsage }>;
 }
-
-

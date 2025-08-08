@@ -1,11 +1,16 @@
 // @jest-environment jsdom
-import { generateText, generateObject, type LanguageModel, type CoreMessage, type Schema } from 'ai';
+import {
+  generateText,
+  generateObject,
+  type LanguageModel,
+  type CoreMessage,
+  type Schema,
+} from 'ai';
 import type { GenericMessage, JudgeAdapter, TokenUsage } from './types';
 import {
   type EvaluationCriterionDef,
   evaluateAiResponse,
   type EvaluatedCriterionResult,
-  type EvaluationResultWithUsage,
 } from './evaluation-utils';
 import util from 'util';
 import { z, ZodTypeAny } from 'zod';
@@ -52,7 +57,9 @@ export interface EvaluationRecord {
  */
 function isJudgeAdapter(value: unknown): value is JudgeAdapter {
   if (typeof value !== 'object' || value === null) return false;
-  return typeof (value as { evaluateObject?: unknown }).evaluateObject === 'function';
+  return (
+    typeof (value as { evaluateObject?: unknown }).evaluateObject === 'function'
+  );
 }
 
 async function toPassAllCriteria(
@@ -86,15 +93,22 @@ async function toPassAllCriteria(
     ? judge
     : {
         evaluateObject: async (args: {
-          jsonSchema: object;
+          zodSchema?: ZodTypeAny;
+          jsonSchema?: object;
           messages: GenericMessage[];
           systemPrompt?: string;
         }): Promise<{ object: unknown; usage?: TokenUsage }> => {
-          // Adapt our fixed JSON schema to a Zod schema for generateObject
+          // Prefer provided zodSchema; fallback to default
           const zodCriteria = z
-            .object({ id: z.string(), description: z.string(), passed: z.boolean() })
+            .object({
+              id: z.string(),
+              description: z.string(),
+              passed: z.boolean(),
+            })
             .strict();
-          const zodSchema = z.object({ criteria: z.array(zodCriteria) }).strict();
+          const zodSchema =
+            (args.zodSchema as ZodTypeAny) ??
+            z.object({ criteria: z.array(zodCriteria) }).strict();
 
           const result = await generateObject({
             model: judge as LanguageModel,
@@ -214,11 +228,16 @@ async function toHaveToolCallResult(
 ): Promise<jest.CustomMatcherResult> {
   const calls = received.filter(msg => msg.role === 'tool');
   // Check each tool message's content entries for the specified toolName
-  const hasCall = calls.some(
-    (call: any) =>
-      Array.isArray(call.content) &&
-      call.content.some((entry: any) => entry.toolName === toolName)
-  );
+  const hasCall = calls.some(call => {
+    const content = call.content as unknown;
+    if (!Array.isArray(content)) return false;
+    return content.some(
+      entry =>
+        typeof entry === 'object' &&
+        entry !== null &&
+        (entry as { toolName?: string }).toolName === toolName
+    );
+  });
   return {
     pass: hasCall,
     message: () =>
@@ -260,7 +279,8 @@ export async function runMultiStepTest(
     // Generate agent response
     const agentConfig = options.createAgentPrompt(history);
     const result = await generateText(agentConfig);
-    const assistantMsgs = result.response.messages as unknown as GenericMessage[];
+    const assistantMsgs = result.response
+      .messages as unknown as GenericMessage[];
 
     // Append assistant messages
     modelHistory = [...modelHistory, ...assistantMsgs];
@@ -308,17 +328,37 @@ async function toHaveToolCall(
   const assistantMsgs = received.filter(msg => msg.role === 'assistant');
   let found = false;
   let foundWithArgs = false;
-  let actualArgs: any = undefined;
+  let actualArgs: Record<string, unknown> | undefined = undefined;
   for (const msg of assistantMsgs) {
     if (Array.isArray(msg.content)) {
-      for (const entry of msg.content as unknown[]) {
-        const e: any = entry as any;
+      for (const entry of msg.content as Array<
+        | {
+            type: 'tool-call';
+            toolName: string;
+            input: Record<string, unknown>;
+          }
+        | { type: 'text'; text: string }
+        | {
+            type: 'tool-result';
+            toolName: string;
+            output: unknown;
+            isError?: boolean;
+          }
+      >) {
+        const e = entry as {
+          type?: string;
+          toolName?: string;
+          input?: Record<string, unknown>;
+        };
         if (e && e.type === 'tool-call' && e.toolName === toolName) {
           found = true;
-          actualArgs = e.input;
+          actualArgs = e.input as Record<string, unknown>;
           if (
             !expectedArgs ||
-            deepPartialMatch(e.input as Record<string, z.infer<ZodTypeAny>>, expectedArgs)
+            deepPartialMatch(
+              e.input as Record<string, z.infer<ZodTypeAny>>,
+              expectedArgs
+            )
           ) {
             foundWithArgs = true;
             break;

@@ -87,7 +87,10 @@ import {
 const criteria = defineEvaluationCriteria()
   .add(CRITERIA.Relevance)
   .add(CRITERIA.Professionalism)
-  .add({ id: 'technical_detail', description: 'Mentions at least one concrete technical detail.' })
+  .add({
+    id: 'technical_detail',
+    description: 'Mentions at least one concrete technical detail.',
+  })
   .build();
 
 // 2️⃣ Provide a judge (adapter over your preferred LLM)
@@ -95,7 +98,11 @@ const judge: JudgeAdapter = {
   async evaluateObject({ jsonSchema, messages, systemPrompt }) {
     // Call any LLM here and return a JSON object matching jsonSchema
     // Minimal pseudo-call; replace with your provider
-    const { object, usage } = await someLLM.generateObject({ schema: jsonSchema, messages, system: systemPrompt });
+    const { object, usage } = await someLLM.generateObject({
+      schema: jsonSchema,
+      messages,
+      system: systemPrompt,
+    });
     return { object, usage };
   },
 };
@@ -104,7 +111,10 @@ const judge: JudgeAdapter = {
 it('assistant answers deployment question', async () => {
   const conversation: GenericMessage[] = [
     { role: 'user', content: 'How do I deploy a React app?' },
-    { role: 'assistant', content: 'Use platforms such as Vercel, Netlify or AWS…' },
+    {
+      role: 'assistant',
+      content: 'Use platforms such as Vercel, Netlify or AWS…',
+    },
   ];
 
   await expect(conversation).toPassAllCriteria(criteria, judge);
@@ -210,7 +220,10 @@ const conversation = await runMultiStepTest(
     createAgentPrompt: messages => ({
       // you can still use any SDK to create assistant messages
       model: openai('gpt-5'),
-      messages: [{ role: 'system', content: 'You are a helpful agent' }, ...messages],
+      messages: [
+        { role: 'system', content: 'You are a helpful agent' },
+        ...messages,
+      ],
     }),
   }
 );
@@ -265,13 +278,24 @@ interface TokenUsage {
 // Generic message shape the framework uses
 type GenericMessage = {
   role: 'system' | 'user' | 'assistant' | 'tool';
-  content: string | Array<{ type: 'text'; text: string } | { type: 'tool-call'; toolName: string; input: Record<string, unknown> }>;
+  content:
+    | string
+    | Array<
+        | { type: 'text'; text: string }
+        | {
+            type: 'tool-call';
+            toolName: string;
+            input: Record<string, unknown>;
+          }
+      >;
 };
 
-// Adapter you implement to call your preferred LLM
+// Adapter you implement to call your preferred LLM (Zod-first)
+import type { ZodTypeAny } from 'zod';
 interface JudgeAdapter {
   evaluateObject(args: {
-    jsonSchema: object;
+    zodSchema?: ZodTypeAny; // preferred
+    jsonSchema?: object; // optional, for providers needing JSON Schema
     messages: GenericMessage[];
     systemPrompt?: string;
   }): Promise<{ object: unknown; usage?: TokenUsage }>;
@@ -282,23 +306,39 @@ interface JudgeAdapter {
 
 ## Using the AI SDK (optional adapter)
 
-```ts
+````ts
 import { openai } from '@ai-sdk/openai';
-import { generateObject, type ModelMessage } from 'ai';
+import { generateObject, type CoreMessage, type Schema } from 'ai';
+import { z } from 'zod';
 import { type JudgeAdapter } from 'jest-llm-eval';
 
 export const aiSdkJudge: JudgeAdapter = {
-  async evaluateObject({ jsonSchema, messages, systemPrompt }) {
+  async evaluateObject({ zodSchema, jsonSchema, messages, systemPrompt }) {
+    // Prefer Zod schema; fallback to provided JSON Schema if needed
+    const schemaToUse: Schema | undefined =
+      (zodSchema as unknown as Schema) ?? (jsonSchema as unknown as Schema);
+    if (!schemaToUse) throw new Error('Provide zodSchema or jsonSchema');
+
     const res = await generateObject({
-      model: openai('gpt-5'),
-      schema: jsonSchema,
-      messages: messages as unknown as ModelMessage[],
+      model: openai('gpt-4o-mini'),
+      schema: schemaToUse,
+      messages: messages as unknown as CoreMessage[],
       system: systemPrompt,
     });
-    return { object: res.object, usage: res.usage };
+    return { object: res.object, usage: { totalTokens: res.usage?.totalTokens ?? 0 } };
   },
 };
-```
+
+### Pre-built AI SDK judge
+
+```ts
+import { openai } from '@ai-sdk/openai';
+import { createAiSdkJudge } from 'jest-llm-eval';
+
+const judge = createAiSdkJudge(openai('gpt-4o-mini'));
+````
+
+````
 
 ---
 
@@ -316,7 +356,7 @@ Run them with:
 
 ```bash
 node examples/basic-evaluation.ts   # or ts-node
-```
+````
 
 ---
 

@@ -9,4 +9,3 @@ Describe the change and why it’s needed.
 - [ ] Passes lint and type checks
 
 ### Screenshots/CLI output (if relevant)
-
